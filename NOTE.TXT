@@ -1,171 +1,96 @@
 ==========================================================================================
 THACO AGRI - HỆ THỐNG QUẢN LÝ TÀI SẢN, DỊCH VỤ HOẠT ĐỘNG & THU MUA
-HƯỚNG DẪN CÀI ĐẶT & CHẠY ỨNG DỤNG TRÊN MÁY TÍNH CÁ NHÂN (VS CODE & SQL SERVER)
+TÀI LIỆU PHÂN TÍCH TỔNG HỢP & HƯỚNG DẪN CÀI ĐẶT TRÊN MÁY TÍNH CÁ NHÂN (VS CODE & SQL SERVER)
 ==========================================================================================
 
 1. KIẾN TRÚC HỆ THỐNG (TWO-TIER ARCHITECTURE)
 ------------------------------------------------------------------------------------------
 - Frontend (Client):
-  + Thư mục: `src/` (chứa toàn bộ giao diện React 19, Tailwind CSS, Ant Design, Components).
-  + Thư mục tài nguyên tĩnh: `public/` (manifest, favicon, icons).
-  + File HTML Shell: `index.html`.
+  + Thư mục: `src/` (React 19, TypeScript, Tailwind CSS, Ant Design, Lucide Icons).
+  + Thư mục tài nguyên tĩnh: `public/` (manifest, favicon, và thư mục `public/form/` chứa 4 biểu mẫu gốc).
+  + File tài liệu phân tích chi tiết: `Tai_Lieu_Phan_Tich_Nghiep_Vu_THACO_AGRI.md` (hoặc tải file Word `.docx` trực tiếp trên thanh Header).
 - Backend (Server):
-  + Thư mục: `server/` (chứa RESTful API endpoints, Database Store, logic nghiệp vụ, T-SQL script).
+  + Thư mục: `server/` (RESTful API endpoints, Database Store, logic nghiệp vụ, T-SQL script).
   + Entry Point khởi chạy: `server.ts`.
 - Cơ sở Dữ liệu (Database):
-  + Microsoft SQL Server 2019 / 2022 (Database: ThacoAgri_AssetDB).
+  + Microsoft SQL Server 2019 / 2022 (Database: `ThacoAgri_AssetDB` - kịch bản `ThacoAgri_Database_SQLServer2019.sql`).
 
 ------------------------------------------------------------------------------------------
-2. YÊU CẦU MÔI TRƯỜNG TRÊN MÁY TÍNH (PREREQUISITES)
+2. TỔNG HỢP CÁC CHỨC NĂNG NGHIỆP VỤ ĐÃ CẬP NHẬT TRONG HỆ THỐNG
 ------------------------------------------------------------------------------------------
-Trước khi bắt đầu, hãy đảm bảo máy tính của bạn đã cài đặt các phần mềm sau:
-1. Node.js (Khuyến nghị bản LTS v20.x hoặc v22.x):
-   - Tải tại: https://nodejs.org
-   - Kiểm tra bằng lệnh: `node -v` và `npm -v`
-2. Visual Studio Code (VS Code):
-   - Tải tại: https://code.visualstudio.com
-3. Microsoft SQL Server & Công cụ quản trị:
-   - SQL Server 2019 / 2022 (Bản Express hoặc Developer miễn phí).
-   - SQL Server Management Studio (SSMS) hoặc Azure Data Studio để quản trị và chạy script SQL.
+2.1. Quản lý Tài sản Định danh theo Hãng sản xuất, Dòng máy & Cấu hình chi tiết:
+  - Người dùng (CBNV) khi đề xuất cấp phát chỉ cần chọn chủng loại chung (ví dụ: Laptop, Máy tính bàn).
+  - Thu mua (khi lập PO), Thủ kho (khi định danh nhập kho, bảng hiển thị tồn kho và khi cấp phát) chọn và quản lý chi tiết:
+    + Hãng sản xuất (`brand`: Dell, HP, Lenovo, Asus, Apple, Canon...)
+    + Dòng máy (`model_name`: Latitude 5440, ThinkPad T14 Gen 4, ProBook 440 G10...)
+    + Cấu hình kỹ thuật (`specifications`: CPU, RAM, SSD, Màn hình...)
+
+2.2. Tạo Đề xuất Cấp phát mới với 4 Biểu mẫu động (`public/form/`):
+  Khi chọn 1 trong 4 loại đề xuất, giao diện tự động hiển thị form nhập liệu tương ứng và xuất file điền đúng vị trí:
+  1) Đề xuất cấp Văn phòng phẩm (`BM_VPP01.xlsx`):
+     - Yêu cầu sinh ra hiển thị tên: Người đề xuất.
+     - Nhập mục đích và danh sách mặt hàng (chỉ lọc các vật tư thuộc nhóm Văn phòng phẩm) + số lượng.
+     - Xuất file `BM_VPP01.xlsx`: Tự động điền Người yêu cầu – Chức vụ, Phòng ban, Mục đích, Tên mặt hàng & Số lượng.
+  2) Đề xuất cấp Đồng phục (`BM_DP01.xlsx`):
+     - Yêu cầu sinh ra hiển thị tên: Người nhận (người được đề xuất cấp).
+     - Nhập danh sách người cần cấp (có thể nhiều người: Họ tên, Giới tính, Chức vụ) và danh sách đồng phục (Tên vật tư, Số lượng) đi theo từng người nhận.
+     - Xuất file `BM_DP01.xlsx`: Tự động điền Người yêu cầu, Đơn vị, Phòng/ban, Chức vụ, Họ tên & Chức vụ người nhận (tự động chèn thêm cặp dòng nếu có nhiều người nhận) và bảng chi tiết Người cần cấp – Giới tính – Chức vụ – Tên vật tư – Số lượng (tự động chèn thêm dòng).
+  3) Đề xuất cấp Máy tính / Laptop (`BM_MT01.docx`):
+     - Yêu cầu sinh ra hiển thị tên: Người cần cấp (người sử dụng).
+     - Chọn Máy tính bàn hoặc Laptop (mặc định mặt hàng theo lựa chọn, không cần bảng chọn mặt hàng thủ công), điền Người sử dụng, Chức vụ, Ban/Phòng, Bộ phận, Ngày nhận việc, Mục đích sử dụng.
+     - Xuất file Word `BM_MT01.docx`: Tự động điền đầy đủ thông tin và tick chọn Máy tính bàn hoặc Laptop vào đúng vị trí.
+  4) Đề xuất cấp Thiết bị CNTT (`BM_CNTT01.xlsx`):
+     - Yêu cầu sinh ra hiển thị tên: Người chịu trách nhiệm (người sử dụng).
+     - Nhập Mục đích sử dụng, Người chịu trách nhiệm/bàn giao, Danh sách mặt hàng (chỉ lọc nhóm Thiết bị CNTT) & Số lượng.
+     - Xuất file `BM_CNTT01.xlsx`: Tự động điền Người đề xuất, Chức vụ, Mục đích, Ngày/tháng/năm và bảng Loại mặt hàng – Số lượng – Người chịu trách nhiệm.
+
+2.3. Chỉnh sửa (Edit) phiếu đã tạo:
+  - Hỗ trợ nút "Sửa" trực tiếp đối với phiếu Đề xuất cấp phát (`NHAP`, `CHO_TIEP_NHAN`) và Ticket sự cố bảo trì (`MOI`, `DANG_XU_LY`).
+
+2.4. Cấu hình Cây Danh Mục Chi Phí Dịch Vụ (3 tầng):
+  - Đặt tại menu `Cấu Hình & Quản Trị Hệ Thống` -> Tab `1. Cây Danh Mục Chi Phí`.
+  - Phân theo 2 khối chuẩn:
+    + `1. CHI PHÍ VẬN HÀNH & CÔNG TÁC` (Mã gốc: `CPVH`)
+    + `2. CHI PHÍ GIAO TẾ & PHÚC LỢI` (Mã gốc: `CPPL`)
+
+2.5. Hệ thống 4 Báo cáo Quản trị (Tất cả đều lọc theo thời gian & xuất Excel `.xlsx`):
+  1) Báo cáo 1 - Chi phí theo nhóm danh mục:
+     - a. Tài sản tiêu hao
+     - b. Tài sản định danh
+     - c. Dịch vụ (lọc sâu theo Khối chi phí `1. CPVH` / `2. CPPL` và theo Nhóm chi phí)
+  2) Báo cáo 2 - Chi phí theo Nhà cung cấp
+  3) Báo cáo 3 - Chi phí theo Tên thiết bị
+  4) Báo cáo 4 - Chi phí theo Đơn vị
 
 ------------------------------------------------------------------------------------------
 3. CÁC BƯỚC CÀI ĐẶT & CHẠY TRÊN VS CODE (STEP-BY-STEP)
 ------------------------------------------------------------------------------------------
-
-BƯỚC 1: MỞ THƯ MỤC DỰ ÁN
-- Mở Visual Studio Code.
-- Chọn `File` -> `Open Folder...` -> Chọn thư mục chứa toàn bộ mã nguồn của dự án này.
-
-BƯỚC 2: CÀI ĐẶT THƯ VIỆN PHỤ THUỘC (DEPENDENCIES)
-- Trong VS Code, mở Terminal bằng tổ hợp phím: `Ctrl + ~` (hoặc vào menu `Terminal` -> `New Terminal`).
-- Chạy lệnh sau để tải và cài đặt toàn bộ package:
-  ```bash
+BƯỚC 1: Mở thư mục dự án trong Visual Studio Code.
+BƯỚC 2: Mở Terminal (`Ctrl + ~`) và cài đặt thư viện:
   npm install
-  ```
-
-BƯỚC 3: TẠO CƠ SỞ DỮ LIỆU MICROSOFT SQL SERVER 2019 / 2022
-File script tạo CSDL & nạp sẵn dữ liệu mẫu đã có sẵn ngay tại thư mục gốc:
-`ThacoAgri_Database_SQLServer2019.sql`
-
-Cách thực hiện trên máy tính:
-1. Mở phần mềm SQL Server Management Studio (SSMS) hoặc Azure Data Studio.
-2. Kết nối vào máy chủ SQL Server của bạn (Server name: `localhost` hoặc `.\SQLEXPRESS`).
-3. Mở file script SQL:
-   - Trong SSMS: Chọn `File` -> `Open` -> `File...` -> Chọn file `ThacoAgri_Database_SQLServer2019.sql` tại thư mục dự án.
-   - Hoặc kéo thả file `ThacoAgri_Database_SQLServer2019.sql` vào cửa sổ SSMS.
-4. Bấm nút [Execute] màu xanh (hoặc nhấn phím tắt F5 trên bàn phím).
-5. Kịch bản sẽ tự động:
-   - Tạo CSDL: `ThacoAgri_AssetDB` với bảng mã tiếng Việt Unicode `Vietnamese_CI_AS`.
-   - Tạo đầy đủ 15 bảng chuẩn quan hệ (Primary Key, Foreign Key, Unique, Check Constraints, Indexes).
-   - Nạp sẵn toàn bộ dữ liệu mẫu thực tế: Đơn vị (Chu Lai, Gia Lai, Campuchia), Nhân sự & Phân quyền RBAC, Kho bãi, Danh mục vật tư, Tài sản định danh (Serial, QR), Tồn kho tiêu hao, Nhu cầu gom PO, Đơn hàng PO, Phiếu đề xuất cấp phát, Ticket sự cố kỹ thuật IT, Lịch sử luân chuyển, Nhật ký kiểm toán.
-   - Cuối cùng, script sẽ tự động in bảng tổng kết số lượng bản ghi của 15 bảng để bạn kiểm tra!
-6. (Tùy chọn) Bạn cũng có thể tải file này trực tiếp từ trình duyệt khi web đang chạy:
-   `http://localhost:3000/ThacoAgri_Database_SQLServer2019.sql` hoặc `http://localhost:3000/api/sql-schema`.
-
-BƯỚC 4: CHẠY HỆ THỐNG Ở CHẾ ĐỘ PHÁT TRIỂN (DEVELOPMENT MODE)
-- Trong Terminal của VS Code, gõ lệnh:
-  ```bash
+BƯỚC 3: Tạo CSDL Microsoft SQL Server 2019 / 2022 (Tùy chọn):
+  - Mở SSMS / Azure Data Studio, mở file `ThacoAgri_Database_SQLServer2019.sql` và nhấn [Execute] (F5).
+BƯỚC 4: Chạy hệ thống ở chế độ phát triển:
   npm run dev
-  ```
-- Terminal sẽ hiển thị:
-  `[THACO AGRI Engine] Server running on http://0.0.0.0:3000`
-- Mở trình duyệt Web (Chrome / Edge / Firefox) và truy cập:
-  `http://localhost:3000`
-- Bạn có thể chỉnh sửa code trong `src/` hoặc `server/`, hệ thống sẽ tự động cập nhật.
-
-BƯỚC 5: ĐÓNG GÓI & CHẠY MÔI TRƯỜNG PRODUCTION (NẾU CẦN)
-- Khi muốn biên dịch ra file production:
-  ```bash
-  npm run build
-  npm start
-  ```
-- Ứng dụng sẽ chạy ở chế độ tối ưu hóa cao nhất.
+  - Truy cập trình duyệt tại: http://localhost:3000
 
 ------------------------------------------------------------------------------------------
 4. CẤU TRÚC THƯ MỤC DỰ ÁN
 ------------------------------------------------------------------------------------------
-Dự án được phân chia rành mạch để phát triển lâu dài:
-
-├── src/                              # CLIENT SOURCE (GIAO DIỆN REACT)
-│   ├── components/                   # Các màn hình phân hệ (Dashboard, PO, Requests, Tickets, Assets...)
+├── src/                              # CLIENT SOURCE (GIAO DIỆN REACT 19)
+│   ├── components/                   # Các màn hình phân hệ (Dashboard, PO, Requests, Tickets, Assets, Expenses, Reports, Admin)
 │   ├── context/                      # AppContext quản lý trạng thái và đồng bộ dữ liệu
-│   ├── services/                     # api.ts thực hiện các cuộc gọi REST API sang Server
-│   ├── utils/                        # Xuất file Excel (.xlsx) & kịch bản in ấn
-│   ├── types.ts                      # Kiểu dữ liệu TypeScript client
-│   ├── App.tsx                       # Component chính tích hợp điều hướng đa màn hình (Mobile & Desktop)
-│   ├── main.tsx                      # Điểm gắn kết DOM
-│   └── index.css                     # Tailwind CSS
-│
-├── public/                           # TÀI NGUYÊN TĨNH CLIENT
-│   ├── manifest.json                 # Cấu hình PWA cài đặt ứng dụng màn hình chính
-│   └── favicon.ico
-│
+│   ├── services/                     # api.ts kết nối REST API sang Server
+│   ├── utils/                        # Xuất Excel (.xlsx), Xuất 4 Biểu mẫu (/public/form/), Xuất File Phân Tích (.docx)
+│   ├── types.ts                      # Kiểu dữ liệu TypeScript Client
+│   └── App.tsx                       # Component điều hướng chính
+├── public/
+│   ├── form/                         # 4 biểu mẫu chuẩn: BM_VPP01.xlsx, BM_DP01.xlsx, BM_MT01.docx, BM_CNTT01.xlsx
+│   └── assets/                       # Tài liệu và hình ảnh hệ thống
 ├── server/                           # SERVER SOURCE (NODE.JS & EXPRESS BACKEND)
-│   ├── data/
-│   │   ├── initialData.ts            # Dữ liệu mẫu ban đầu
-│   │   └── sqlServerScript.ts        # Kịch bản T-SQL khởi tạo CSDL SQL Server 2022
-│   ├── db/
-│   │   └── store.ts                  # Bộ xử lý Database Store và logic nghiệp vụ Server
-│   ├── routes/
-│   │   └── api.ts                    # REST API endpoints (/api/data, /api/purchase-orders, /api/requests...)
-│   ├── types.ts                      # Kiểu dữ liệu Backend
-│   └── index.ts                      # Khởi tạo Express Server & Middleware
-│
-├── server.ts                         # Entry Point khởi chạy toàn hệ thống
-├── index.html                        # File HTML chính trỏ vào src/main.tsx
-├── package.json                      # Quản lý thư viện và scripts (dev, build, start, lint)
-├── vite.config.ts                    # Cấu hình Vite bundler
-└── tsconfig.json                     # Cấu hình TypeScript compiler
-
-------------------------------------------------------------------------------------------
-5. TÀI KHOẢN KIỂM THỬ SẴN TRÊN THANH HEADER (RBAC DEMO)
-------------------------------------------------------------------------------------------
-Trên thanh tiêu đề (Header) của ứng dụng có thanh chọn nhanh người dùng (Quick Switcher):
-1. Nguyễn Văn Hùng - Thủ kho trưởng (`EMP-001` - Vai trò: `THU_KHO`):
-   Toàn quyền kiểm soát kho, xuất nhập vật tư, gom PO, duyệt cấp phát.
-2. Trần Thị Mai - Chuyên viên Thu mua (`EMP-002` - Vai trò: `THU_MUA`):
-   Gom nhu cầu mua sắm, tạo đơn hàng PO, theo dõi giá và nhà cung cấp.
-3. Lê Hoàng Nam - Kỹ sư CNTT (`EMP-003` - Vai trò: `KY_THUAT`):
-   Tiếp nhận xử lý ticket sự cố, đề xuất phương án kỹ thuật theo 3 kịch bản chuẩn.
-4. Phạm Hồng Ánh / Hoàng Minh Đức - Nhân viên (`EMP-004` / `EMP-007` - Vai trò: `CBNV`):
-   Tra cứu tài sản cá nhân được bàn giao, lập đề xuất xin cấp mới, báo hỏng thiết bị.
-5. Đặng Tuấn Kiệt - Giám đốc CNTT & Quản trị (`EMP-005` - Vai trò: `QUAN_TRI`):
-   Quản trị toàn hệ thống, cấu hình CSDL Microsoft SQL Server và xem nhật ký Audit Log.
-
-------------------------------------------------------------------------------------------
-5.1. QUAN HỆ 3 BẢNG CƠ CẤU TỔ CHỨC: ĐƠN VỊ ➔ PHÒNG BAN ➔ NHÂN VIÊN (CHỨC VỤ & ROLE)
-------------------------------------------------------------------------------------------
-Ba bảng này được thiết kế ràng buộc toàn vẹn khóa ngoại (Foreign Keys) để đảm bảo logic phần mềm:
-1. BẢNG ĐƠN VỊ (`OrganizationUnits`):
-   - Cấp cao nhất trong phân cấp pháp nhân (Ví dụ: Tổng công ty THACO AGRI, KLH Gia Lai, KLH Campuchia).
-   - Khóa chính: `unit_id`.
-2. BẢNG PHÒNG BAN (`Departments`):
-   - Trực thuộc một Đơn vị cụ thể (`unit_id`).
-   - Ràng buộc: `CONSTRAINT FK_Dept_Unit FOREIGN KEY (unit_id) REFERENCES OrganizationUnits(unit_id)`.
-   - Một Đơn vị có nhiều Phòng ban; không thể tạo phòng ban mồ côi.
-3. BẢNG NHÂN VIÊN (`Employees`):
-   - Bắt buộc liên kết với Đơn vị chi trả lương (`unit_id`) và Phòng ban trực thuộc (`department_id`).
-   - Bắt buộc có Chức vụ công tác (`position`, ví dụ: Giám đốc, Trưởng phòng, Kỹ sư IT, Thủ kho trưởng, v.v.).
-   - Gán Vai trò hệ thống (`role`: `CBNV`, `THU_KHO`, `THU_MUA`, `KY_THUAT`, `QUAN_TRI`, `QUAN_LY`).
-   - Ràng buộc khóa ngoại:
-     + `CONSTRAINT FK_Emp_Unit FOREIGN KEY (unit_id) REFERENCES OrganizationUnits(unit_id)`
-     + `CONSTRAINT FK_Emp_Dept FOREIGN KEY (department_id) REFERENCES Departments(department_id)`
-   - Logic phần mềm: Khi thêm mới nhân viên (User Add), người dùng chọn Đơn vị, hệ thống tự động lọc danh sách Phòng ban trực thuộc đơn vị đó, bảo đảm tính toàn vẹn 100%. Không thể gán nhân viên vào phòng ban thuộc đơn vị khác.
-
-------------------------------------------------------------------------------------------
-6. XỬ LÝ SỰ CỐ THƯỜNG GẶP (TROUBLESHOOTING)
-------------------------------------------------------------------------------------------
-1. Lỗi cổng 3000 bị chiếm dụng (Port 3000 is already in use):
-   - Mở file `.env` (hoặc tạo mới từ `.env.example`), đổi giá trị `PORT=3001` hoặc `PORT=8080`.
-   - Chạy lại lệnh: `npm run dev`.
-2. Lỗi PowerShell trên Windows chặn chạy script (ExecutionPolicy):
-   - Mở PowerShell với quyền Administrator và chạy lệnh:
-     `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser`
-   - Nhập `Y` rồi nhấn Enter.
-3. Muốn làm sạch CSDL về trạng thái ban đầu:
-   - Trên giao diện Web, bấm nút "Khôi phục dữ liệu gốc" (Reset Data) ở góc trên bên phải thanh Header.
-   - Hoặc gửi yêu cầu: `POST http://localhost:3000/api/reset`.
-
-==========================================================================================
-Chúc bạn triển khai và trải nghiệm thành công Hệ thống THACO AGRI trên máy tính cá nhân!
+│   ├── data/                         # Dữ liệu khởi tạo chuẩn (initialData.ts) & T-SQL script
+│   ├── db/                           # Bộ xử lý lưu trữ bền vững (store.ts)
+│   └── routes/                       # REST API endpoints (api.ts)
+├── Tai_Lieu_Phan_Tich_Nghiep_Vu_THACO_AGRI.md  # Tài liệu phân tích nghiệp vụ & đặc tả hệ thống đầy đủ
+└── ThacoAgri_Database_SQLServer2019.sql        # Kịch bản tạo CSDL SQL Server
 ==========================================================================================

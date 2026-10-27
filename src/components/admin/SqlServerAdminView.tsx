@@ -43,6 +43,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { SQL_SERVER_SCHEMA_SCRIPT } from '../../utils/sqlServerScript';
 import { formatDateVN, formatVND } from '../../utils/excelExporter';
+import { exportSystemAnalysisDocx } from '../../utils/analysisDocExporter';
 import { Supplier, OrganizationUnit, Department, Warehouse, Employee, UserRole, Category, TrackingType, ExpenseCategory } from '../../types';
 
 export type AdminSubTab = 
@@ -894,7 +895,14 @@ export const SqlServerAdminView: React.FC<SqlServerAdminViewProps> = ({ initialS
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => exportSystemAnalysisDocx()}
+            className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+          >
+            <FileText className="w-4 h-4" />
+            Tải File Phân Tích (.docx)
+          </button>
           <button
             onClick={handleDownloadSql}
             className="flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"

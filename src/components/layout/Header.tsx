@@ -14,9 +14,11 @@ import {
   ShieldAlert,
   Info,
   Menu,
-  X
+  X,
+  Download
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { exportSystemAnalysisDocx } from '../../utils/analysisDocExporter';
 
 interface HeaderProps {
   onOpenTemplates: () => void;
@@ -126,7 +128,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Right Navigation & Quick Controls */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             {/* Warehouse selector */}
             <div className="hidden lg:flex items-center gap-1.5 bg-emerald-900/60 border border-emerald-700/50 rounded-lg px-2.5 py-1 text-xs">
               <Warehouse className="w-3.5 h-3.5 text-emerald-300" />
@@ -143,6 +145,16 @@ export const Header: React.FC<HeaderProps> = ({
                 ))}
               </select>
             </div>
+
+            {/* Download Updated System Analysis (.docx) Button */}
+            <button
+              onClick={() => exportSystemAnalysisDocx()}
+              title="Tải Tài liệu Phân tích Nghiệp vụ & Đặc tả Hệ thống bản cập nhật đầy đủ (.docx)"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">File Phân Tích</span>
+            </button>
 
             {/* Quick Action Buttons */}
             <button

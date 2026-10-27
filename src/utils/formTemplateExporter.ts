@@ -1,72 +1,109 @@
 import JSZip from 'jszip';
 
 export interface VPPExportItem {
-  item_name: string;
-  unit_of_measure: string;
-  qty_requested: number;
+  item_name?: string;
+  itemName?: string;
+  unit_of_measure?: string;
+  unitOfMeasure?: string;
+  qty_requested?: number;
+  quantity?: number;
   note?: string;
 }
 
 export interface VPPFormExportData {
-  requester_name: string;     // 1: Người yêu cầu
-  requester_position: string; // 1: Chức vụ
-  department_name: string;    // 2: Phòng ban
+  requester_name?: string;
+  requesterName?: string;
+  requester_position?: string;
+  requesterPosition?: string;
+  department_name?: string;
+  departmentName?: string;
   unit_name?: string;
-  purpose: string;            // 3: Mục đích
-  items: VPPExportItem[];     // + Tên mặt hàng, + Số lượng
+  unitName?: string;
+  purpose: string;
+  items: VPPExportItem[];
 }
 
 export interface UniformRecipientExportItem {
-  item_name: string;
-  uniform_type: 'AO_SO_MI' | 'AO_KHOAC' | 'BAO_HO_LAO_DONG' | 'KHAC';
-  qty: number;
+  item_name?: string;
+  itemName?: string;
+  unit_of_measure?: string;
+  unitOfMeasure?: string;
+  uniform_type?: 'AO_SO_MI' | 'AO_KHOAC' | 'BAO_HO_LAO_DONG' | 'KHAC';
+  qty?: number;
+  quantity?: number;
   note?: string;
 }
 
 export interface UniformRecipientExportEntry {
-  full_name: string;          // 5: Họ tên người nhận
-  gender: 'Nam' | 'Nữ';       // 7: Giới tính
-  position: string;           // 6: Chức vụ người nhận
+  full_name?: string;
+  fullName?: string;
+  gender: 'Nam' | 'Nữ';
+  position: string;
   contract_no?: string;
+  contractNo?: string;
   contract_date?: string;
+  contractDate?: string;
   items: UniformRecipientExportItem[];
 }
 
 export interface UniformFormExportData {
-  requester_name: string;       // 1: Người yêu cầu
-  unit_name: string;            // 2: Đơn vị (Tên công ty)
-  requester_department: string; // 3: Phòng/ban người yêu cầu
-  requester_position: string;   // 4: Chức vụ người yêu cầu
+  requester_name?: string;
+  requesterName?: string;
+  unit_name?: string;
+  unitName?: string;
+  requester_department?: string;
+  departmentName?: string;
+  requester_position?: string;
+  requesterPosition?: string;
   recipients: UniformRecipientExportEntry[];
 }
 
 export interface ComputerFormExportData {
-  requester_name: string;       // 1: Người làm đề nghị
-  requester_department: string; // 2: Phòng/ban người đề nghị
-  requester_block?: string;     // 3: Khối
-  unit_name: string;            // 4: Đơn vị
-  equipment_choice: 'PC' | 'LAPTOP'; // 8: Máy tính để bàn, 9: Laptop
-  user_full_name: string;       // 10: Tên người sử dụng
-  user_position: string;        // 11: Chức vụ
-  user_department: string;      // 12: Ban/phòng người sử dụng
-  user_section: string;         // 13: Bộ phận
-  user_onboarding_date: string; // 14: Ngày nhận việc
-  user_purpose: string;         // 15: Mục đích sử dụng
+  requester_name?: string;
+  requesterName?: string;
+  requester_department?: string;
+  requesterDepartment?: string;
+  requester_block?: string;
+  blockName?: string;
+  unit_name?: string;
+  unitName?: string;
+  equipment_choice?: 'PC' | 'LAPTOP' | 'DESKTOP';
+  computerType?: 'PC' | 'LAPTOP' | 'DESKTOP';
+  user_full_name?: string;
+  userFullName?: string;
+  user_position?: string;
+  userPosition?: string;
+  user_department?: string;
+  userDepartment?: string;
+  user_section?: string;
+  userSection?: string;
+  user_onboarding_date?: string;
+  startDate?: string;
+  user_purpose?: string;
+  purpose?: string;
 }
 
 export interface CNTTExportItem {
-  item_name: string;
-  specifications?: string;      // 7: Quy cách
-  unit_of_measure: string;
-  qty_requested: number;
-  recipient_name: string;       // Người chịu trách nhiệm
+  item_name?: string;
+  itemName?: string;
+  specifications?: string;
+  unit_of_measure?: string;
+  unitOfMeasure?: string;
+  qty_requested?: number;
+  quantity?: number;
+  purpose?: string;
+  recipient_name?: string;
+  responsiblePerson?: string;
 }
 
 export interface CNTTFormExportData {
-  requester_name: string;       // 1: Người đề xuất
-  requester_position: string;   // 2: Chức vụ / Bộ phận người đề xuất
-  purpose: string;              // 3: Mục đích sử dụng
-  items: CNTTExportItem[];      // + Loại mặt hàng đề xuất - số lượng - người chịu trách nhiệm
+  requester_name?: string;
+  requesterName?: string;
+  requester_position?: string;
+  requesterPosition?: string;
+  purpose: string;
+  responsiblePerson?: string;
+  items: CNTTExportItem[];
 }
 
 function escapeXml(unsafe: string): string {
@@ -159,7 +196,7 @@ function setCellStringInRow(rowXml: string, colLetter: string, rowNum: number, s
  * - + Tên mặt hàng, + Số lượng (Row 11+)
  */
 export async function exportVPPFormTemplate(data: VPPFormExportData, templateBuffer?: ArrayBuffer): Promise<Blob> {
-  const buf = templateBuffer || (await fetch('/form/BM_VPP01.xlsx').then((r) => r.arrayBuffer()));
+  const buf: ArrayBuffer = templateBuffer ?? (await fetch('/form/BM_VPP01.xlsx').then((r) => r.arrayBuffer()));
   const zip = await JSZip.loadAsync(buf);
 
   const sheetPath = 'xl/worksheets/sheet1.xml';
@@ -174,10 +211,13 @@ export async function exportVPPFormTemplate(data: VPPFormExportData, templateBuf
   const ssm = new SharedStringsManager(ssXml);
   const { mm, yyyy } = formatDateParts();
 
-  const requesterDisplay = data.requester_position
-    ? `${data.requester_name} - ${data.requester_position}`
-    : data.requester_name;
-  const deptDisplay = data.department_name || 'Phòng/Ban';
+  const reqName = data.requester_name || data.requesterName || '';
+  const reqPos = data.requester_position || data.requesterPosition || '';
+  const deptName = data.department_name || data.departmentName || 'Phòng/Ban';
+  const unitName = data.unit_name || data.unitName || '';
+
+  const requesterDisplay = reqPos ? `${reqName} - ${reqPos}` : reqName;
+  const deptDisplay = deptName;
   const purposeDisplay = data.purpose || 'Cấp văn phòng phẩm phục vụ công việc';
 
   const rowMap = new Map<number, string>();
@@ -215,8 +255,16 @@ export async function exportVPPFormTemplate(data: VPPFormExportData, templateBuf
     rowMap.set(8, r8);
   }
 
-  const validItems = data.items.filter((it) => it.item_name.trim() !== '');
-  const itemRowsCount = Math.max(2, validItems.length);
+  const normalizedItems = data.items
+    .map((it) => ({
+      item_name: (it.item_name || it.itemName || '').trim(),
+      unit_of_measure: (it.unit_of_measure || it.unitOfMeasure || 'Cái').trim(),
+      qty_requested: Number(it.qty_requested ?? it.quantity ?? 1) || 1,
+      note: it.note || '',
+    }))
+    .filter((it) => it.item_name !== '');
+
+  const itemRowsCount = Math.max(2, normalizedItems.length);
   const delta = itemRowsCount - 2;
 
   const newRowsXml: string[] = [];
@@ -227,7 +275,7 @@ export async function exportVPPFormTemplate(data: VPPFormExportData, templateBuf
   let totalQty = 0;
   for (let i = 0; i < itemRowsCount; i++) {
     const r = 11 + i;
-    const item = validItems[i];
+    const item = normalizedItems[i];
     if (item) {
       const qty = Number(item.qty_requested) || 0;
       totalQty += qty;
@@ -250,14 +298,13 @@ export async function exportVPPFormTemplate(data: VPPFormExportData, templateBuf
     const newR = origR + delta;
     let shifted = shiftRowXml(rowMap.get(origR)!, newR);
     if (origR === 13) {
-      // Update SUM formula and total value
       shifted = shifted.replace(
         /<c r="E\d+"[^>]*>[\s\S]*?<\/c>/,
         `<c r="E${newR}" s="30"><f>SUM(E11:E${12 + delta})</f><v>${totalQty}</v></c>`
       );
     }
-    if (origR === 15 && data.unit_name) {
-      shifted = setCellStringInRow(shifted, 'A', newR, '41', ssm.addString(`Đơn vị chịu chi phí: ${data.unit_name}`));
+    if (origR === 15 && unitName) {
+      shifted = setCellStringInRow(shifted, 'A', newR, '41', ssm.addString(`Đơn vị chịu chi phí: ${unitName}`));
     }
     newRowsXml.push(shifted);
   }
@@ -266,7 +313,7 @@ export async function exportVPPFormTemplate(data: VPPFormExportData, templateBuf
 
   // Update mergeCells if delta > 0
   if (delta > 0) {
-    sheetXml = sheetXml.replace(/<mergeCells[^>]*>([\s\S]*?)<\/mergeCells>/, (_m, inner) => {
+    sheetXml = sheetXml.replace(/<mergeCells[^>]*>([\s\S]*?)<\/mergeCells>/, () => {
       const merges: string[] = [];
       merges.push('<mergeCell ref="A1:B3"/>', '<mergeCell ref="C1:E3"/>', '<mergeCell ref="A8:B8"/>', '<mergeCell ref="B10:C10"/>');
       for (let i = 0; i <= itemRowsCount; i++) {
@@ -285,7 +332,6 @@ export async function exportVPPFormTemplate(data: VPPFormExportData, templateBuf
     });
   }
 
-  // Remove externalReferences from workbook.xml to prevent broken link popup
   wbXml = wbXml.replace(/<externalReferences>[\s\S]*?<\/externalReferences>/, '');
   if (zip.file(wbRelsPath)) {
     let relsXml = await zip.file(wbRelsPath)!.async('string');
@@ -313,7 +359,7 @@ export async function exportVPPFormTemplate(data: VPPFormExportData, templateBuf
  * - Bảng nội dung: Người cần cấp - giới tính - chức vụ - tên vật tư - số lượng tương ứng (tự động chèn thêm hàng)
  */
 export async function exportUniformFormTemplate(data: UniformFormExportData, templateBuffer?: ArrayBuffer): Promise<Blob> {
-  const buf = templateBuffer || (await fetch('/form/BM_DP01.xlsx').then((r) => r.arrayBuffer()));
+  const buf: ArrayBuffer = templateBuffer ?? (await fetch('/form/BM_DP01.xlsx').then((r) => r.arrayBuffer()));
   const zip = await JSZip.loadAsync(buf);
 
   const sheetPath = 'xl/worksheets/sheet2.xml';
@@ -326,6 +372,11 @@ export async function exportUniformFormTemplate(data: UniformFormExportData, tem
 
   const ssm = new SharedStringsManager(ssXml);
   const { dd, mm, yyyy } = formatDateParts();
+
+  const reqName = data.requester_name || data.requesterName || '';
+  const unitName = data.unit_name || data.unitName || '';
+  const reqDept = data.requester_department || data.departmentName || '';
+  const reqPos = data.requester_position || data.requesterPosition || '';
 
   const rowMap = new Map<number, string>();
   const rowMatches = [...sheetXml.matchAll(/<row\b[^>]*r="(\d+)"[^>]*>[\s\S]*?<\/row>/g)];
@@ -342,31 +393,43 @@ export async function exportUniformFormTemplate(data: UniformFormExportData, tem
         'F',
         1,
         '45',
-        ssm.addString(`Đơn vị: ${data.requester_department || data.unit_name}\r\nSố: 01/ĐX-ĐP\r\nNgày: ${dd}/${mm}/${yyyy}`)
+        ssm.addString(`Đơn vị: ${reqDept || unitName}\r\nSố: 01/ĐX-ĐP\r\nNgày: ${dd}/${mm}/${yyyy}`)
       )
     );
   }
   // Row 4: 1 Người yêu cầu
   if (rowMap.has(4)) {
-    rowMap.set(4, setCellStringInRow(rowMap.get(4)!, 'A', 4, '49', ssm.addString(`Người đề nghị cấp: ${data.requester_name}`)));
+    rowMap.set(4, setCellStringInRow(rowMap.get(4)!, 'A', 4, '49', ssm.addString(`Người đề nghị cấp: ${reqName}`)));
   }
   // Row 5: 2 Đơn vị
   if (rowMap.has(5)) {
-    rowMap.set(5, setCellStringInRow(rowMap.get(5)!, 'A', 5, '49', ssm.addString(`Tên Công ty: ${data.unit_name}`)));
+    rowMap.set(5, setCellStringInRow(rowMap.get(5)!, 'A', 5, '49', ssm.addString(`Tên Công ty: ${unitName}`)));
   }
   // Row 6: 3 Phòng/ban người yêu cầu & 4 Chức vụ người yêu cầu
   if (rowMap.has(6)) {
-    let r6 = setCellStringInRow(rowMap.get(6)!, 'A', 6, '25', ssm.addString(`Đơn vị/Bộ phận trình: ${data.requester_department}`));
-    r6 = setCellStringInRow(r6, 'E', 6, '27', ssm.addString(`Chức vụ: ${data.requester_position}`));
+    let r6 = setCellStringInRow(rowMap.get(6)!, 'A', 6, '25', ssm.addString(`Đơn vị/Bộ phận trình: ${reqDept}`));
+    r6 = setCellStringInRow(r6, 'E', 6, '27', ssm.addString(`Chức vụ: ${reqPos}`));
     rowMap.set(6, r6);
   }
 
-  const recipients = data.recipients.length > 0
-    ? data.recipients
-    : [{ full_name: '', gender: 'Nam' as const, position: '', items: [] }];
+  const normalizedRecipients = data.recipients.length > 0
+    ? data.recipients.map((rec) => ({
+        full_name: (rec.full_name || rec.fullName || '').trim(),
+        gender: rec.gender || ('Nam' as const),
+        position: rec.position || '',
+        contract_no: rec.contract_no || rec.contractNo || '',
+        contract_date: rec.contract_date || rec.contractDate || '',
+        items: (rec.items || []).map((it) => ({
+          item_name: (it.item_name || it.itemName || '').trim(),
+          uniform_type: it.uniform_type,
+          qty: Number(it.qty ?? it.quantity ?? 1) || 1,
+          note: it.note || '',
+        })),
+      }))
+    : [{ full_name: '', gender: 'Nam' as const, position: '', contract_no: '', contract_date: '', items: [] }];
 
-  const numRecipients = recipients.length;
-  const delta1 = 2 * (numRecipients - 1); // Extra rows inserted for recipient headers (2 rows per extra recipient)
+  const numRecipients = normalizedRecipients.length;
+  const delta1 = 2 * (numRecipients - 1);
 
   const newRowsXml: string[] = [];
   for (let r = 1; r <= 7; r++) {
@@ -375,7 +438,7 @@ export async function exportUniformFormTemplate(data: UniformFormExportData, tem
 
   // Insert 2 rows (like original rows 8 & 9) for each recipient
   for (let k = 0; k < numRecipients; k++) {
-    const rec = recipients[k];
+    const rec = normalizedRecipients[k];
     const r1 = 8 + 2 * k;
     const r2 = 9 + 2 * k;
     const sttIdx = ssm.addString(`${k + 1}.`);
@@ -406,8 +469,8 @@ export async function exportUniformFormTemplate(data: UniformFormExportData, tem
 
   for (let k = 0; k < tableRowsCount; k++) {
     const r = 13 + delta1 + k;
-    const rec = recipients[k];
-    if (rec && rec.full_name.trim() !== '') {
+    const rec = normalizedRecipients[k];
+    if (rec && rec.full_name !== '') {
       let qtySoMi = 0;
       let qtyAoKhoac = 0;
       let qtyBHLD = 0;
@@ -454,14 +517,13 @@ export async function exportUniformFormTemplate(data: UniformFormExportData, tem
     const newR = origR + totalDelta;
     let shifted = shiftRowXml(rowMap.get(origR)!, newR);
     if (origR === 15) {
-      shifted = setCellStringInRow(shifted, 'A', newR, '51', ssm.addString(`ĐƠN VỊ CHỊU CHI PHÍ: ${data.unit_name}`));
+      shifted = setCellStringInRow(shifted, 'A', newR, '51', ssm.addString(`ĐƠN VỊ CHỊU CHI PHÍ: ${unitName}`));
     }
     newRowsXml.push(shifted);
   }
 
   sheetXml = sheetXml.replace(/<sheetData>[\s\S]*?<\/sheetData>/, `<sheetData>${newRowsXml.join('')}</sheetData>`);
 
-  // Shift mergeCells with row >= 15 by totalDelta
   if (totalDelta > 0) {
     sheetXml = sheetXml.replace(/<mergeCell ref="([A-Z]+)(\d+):([A-Z]+)(\d+)"\/>/g, (full, c1, r1, c2, r2) => {
       const n1 = Number(r1);
@@ -501,17 +563,28 @@ export async function exportUniformFormTemplate(data: UniformFormExportData, tem
  * - 15: Mục đích sử dụng
  */
 export async function exportComputerFormTemplate(data: ComputerFormExportData, templateBuffer?: ArrayBuffer): Promise<Blob> {
-  const buf = templateBuffer || (await fetch('/form/BM_MT01.docx').then((r) => r.arrayBuffer()));
+  const buf: ArrayBuffer = templateBuffer ?? (await fetch('/form/BM_MT01.docx').then((r) => r.arrayBuffer()));
   const zip = await JSZip.loadAsync(buf);
 
   const docPath = 'word/document.xml';
   let docXml = await zip.file(docPath)!.async('string');
 
   const { dd, mm, yyyy } = formatDateParts();
-  const isPC = data.equipment_choice === 'PC';
+  const choice = data.equipment_choice || data.computerType || 'LAPTOP';
+  const isPC = choice === 'PC' || choice === 'DESKTOP';
 
-  // Format onboarding date to dd/mm/yyyy if in YYYY-MM-DD format
-  let onboardingFormatted = data.user_onboarding_date || `${dd}/${mm}/${yyyy}`;
+  const reqName = data.requester_name || data.requesterName || '';
+  const reqDept = data.requester_department || data.requesterDepartment || '';
+  const reqBlock = data.requester_block || data.blockName || '';
+  const unitName = data.unit_name || data.unitName || '';
+  const userFullName = data.user_full_name || data.userFullName || '';
+  const userPosition = data.user_position || data.userPosition || '';
+  const userDepartment = data.user_department || data.userDepartment || '';
+  const userSection = data.user_section || data.userSection || '';
+  const rawOnboarding = data.user_onboarding_date || data.startDate || `${dd}/${mm}/${yyyy}`;
+  const userPurpose = data.user_purpose || data.purpose || '';
+
+  let onboardingFormatted = rawOnboarding;
   if (/^\d{4}-\d{2}-\d{2}$/.test(onboardingFormatted)) {
     const [y, m, d] = onboardingFormatted.split('-');
     onboardingFormatted = `${d}/${m}/${y}`;
@@ -525,18 +598,16 @@ export async function exportComputerFormTemplate(data: ComputerFormExportData, t
   };
 
   if (paras.length > 17) {
-    let p4 = replacePlaceholderInPara(paras[4][0], '1', data.requester_name);
-    let p5 = replacePlaceholderInPara(paras[5][0], '2', data.requester_department);
-    let p6 = replacePlaceholderInPara(paras[6][0], '3', data.requester_block || '');
-    let p7 = replacePlaceholderInPara(paras[7][0], '4', data.unit_name);
+    const p4 = replacePlaceholderInPara(paras[4][0], '1', reqName);
+    const p5 = replacePlaceholderInPara(paras[5][0], '2', reqDept);
+    const p6 = replacePlaceholderInPara(paras[6][0], '3', reqBlock);
+    const p7 = replacePlaceholderInPara(paras[7][0], '4', unitName);
 
     let p8 = replacePlaceholderInPara(paras[8][0], '5', dd);
     p8 = replacePlaceholderInPara(p8, '6', mm);
     p8 = replacePlaceholderInPara(p8, '7', yyyy);
 
-    // P10: 8 (Máy tính để bàn) & 9 (Máy tính xách tay)
     let p10 = paras[10][0];
-    // Replace 8 and 9 with visible tick mark or blank + update Word FORMCHECKBOX default state
     p10 = replacePlaceholderInPara(p10, '8', isPC ? '☑ ' : '☐ ');
     p10 = replacePlaceholderInPara(p10, '9', !isPC ? '☑ ' : '☐ ');
 
@@ -547,22 +618,20 @@ export async function exportComputerFormTemplate(data: ComputerFormExportData, t
       return `<w:checkBox><w:sizeAuto/><w:default w:val="${shouldCheck ? '1' : '0'}"/>${shouldCheck ? '<w:checked/>' : ''}</w:checkBox>`;
     });
 
-    // P11: uncheck "Thiết bị khác"
     const p11 = paras[11][0].replace(
       /<w:checkBox>[\s\S]*?<\/w:checkBox>/g,
       '<w:checkBox><w:sizeAuto/><w:default w:val="0"/></w:checkBox>'
     );
 
-    // P12: 10 (Người sử dụng) & 11 (Chức vụ)
-    let p12 = replacePlaceholderInPara(paras[12][0], '10', data.user_full_name);
-    const padSpaces = ' '.repeat(Math.max(4, 35 - (data.user_full_name || '').length));
+    let p12 = replacePlaceholderInPara(paras[12][0], '10', userFullName);
+    const padSpaces = ' '.repeat(Math.max(4, 35 - userFullName.length));
     p12 = p12.replace(/<w:t xml:space="preserve">\s{15,}<\/w:t>/, `<w:t xml:space="preserve">${padSpaces}</w:t>`);
-    p12 = replacePlaceholderInPara(p12, '11', data.user_position);
+    p12 = replacePlaceholderInPara(p12, '11', userPosition);
 
-    const p13 = replacePlaceholderInPara(paras[13][0], '12', data.user_department);
-    const p14 = replacePlaceholderInPara(paras[14][0], '13', data.user_section);
+    const p13 = replacePlaceholderInPara(paras[13][0], '12', userDepartment);
+    const p14 = replacePlaceholderInPara(paras[14][0], '13', userSection);
     const p16 = replacePlaceholderInPara(paras[16][0], '14', onboardingFormatted);
-    const p17 = replacePlaceholderInPara(paras[17][0], '15', data.user_purpose);
+    const p17 = replacePlaceholderInPara(paras[17][0], '15', userPurpose);
 
     docXml = docXml
       .replace(paras[4][0], p4)
@@ -596,7 +665,7 @@ export async function exportComputerFormTemplate(data: ComputerFormExportData, t
  * - + Loại mặt hàng đề xuất - số lượng - người chịu trách nhiệm (Row 8+)
  */
 export async function exportCNTTFormTemplate(data: CNTTFormExportData, templateBuffer?: ArrayBuffer): Promise<Blob> {
-  const buf = templateBuffer || (await fetch('/form/BM_CNTT01.xlsx').then((r) => r.arrayBuffer()));
+  const buf: ArrayBuffer = templateBuffer ?? (await fetch('/form/BM_CNTT01.xlsx').then((r) => r.arrayBuffer()));
   const zip = await JSZip.loadAsync(buf);
 
   const sheetPath = 'xl/worksheets/sheet1.xml';
@@ -608,6 +677,10 @@ export async function exportCNTTFormTemplate(data: CNTTFormExportData, templateB
   const ssm = new SharedStringsManager(ssXml);
   const { dd, mm, yyyy } = formatDateParts();
 
+  const reqName = data.requester_name || data.requesterName || '';
+  const reqPos = data.requester_position || data.requesterPosition || '';
+  const defaultResp = data.responsiblePerson || '';
+
   const rowMap = new Map<number, string>();
   const rowMatches = [...sheetXml.matchAll(/<row\b[^>]*r="(\d+)"[^>]*>[\s\S]*?<\/row>/g)];
   for (const rm of rowMatches) {
@@ -616,8 +689,8 @@ export async function exportCNTTFormTemplate(data: CNTTFormExportData, templateB
 
   // Row 4: A4 = Người đề nghị: 1, F4 = Bộ phận: 2
   if (rowMap.has(4)) {
-    let r4 = setCellStringInRow(rowMap.get(4)!, 'A', 4, '19', ssm.addString(`Người đề nghị: ${data.requester_name}`));
-    r4 = setCellStringInRow(r4, 'F', 4, '19', ssm.addString(`Bộ phận: ${data.requester_position}`));
+    let r4 = setCellStringInRow(rowMap.get(4)!, 'A', 4, '19', ssm.addString(`Người đề nghị: ${reqName}`));
+    r4 = setCellStringInRow(r4, 'F', 4, '19', ssm.addString(`Bộ phận: ${reqPos}`));
     rowMap.set(4, r4);
   }
 
@@ -635,11 +708,17 @@ export async function exportCNTTFormTemplate(data: CNTTFormExportData, templateB
     );
   }
 
-  const validItems = data.items.length > 0
-    ? data.items
-    : [{ item_name: '', specifications: '', unit_of_measure: 'Cái', qty_requested: 1, recipient_name: '' }];
+  const normalizedItems = data.items.length > 0
+    ? data.items.map((it) => ({
+        item_name: (it.item_name || it.itemName || '').trim(),
+        specifications: it.specifications || '',
+        unit_of_measure: (it.unit_of_measure || it.unitOfMeasure || 'Cái').trim(),
+        qty_requested: Number(it.qty_requested ?? it.quantity ?? 1) || 1,
+        recipient_name: (it.recipient_name || it.responsiblePerson || defaultResp).trim(),
+      }))
+    : [{ item_name: '', specifications: '', unit_of_measure: 'Cái', qty_requested: 1, recipient_name: defaultResp }];
 
-  const itemCount = validItems.length;
+  const itemCount = normalizedItems.length;
   const delta = itemCount - 1;
 
   const newRowsXml: string[] = [];
@@ -649,7 +728,7 @@ export async function exportCNTTFormTemplate(data: CNTTFormExportData, templateB
 
   for (let i = 0; i < itemCount; i++) {
     const r = 8 + i;
-    const it = validItems[i];
+    const it = normalizedItems[i];
     const nameIdx = ssm.addString(it.item_name);
     const specIdx = ssm.addString(it.specifications || '');
     const uomIdx = ssm.addString(it.unit_of_measure || 'Cái');
@@ -681,7 +760,6 @@ export async function exportCNTTFormTemplate(data: CNTTFormExportData, templateB
 
   sheetXml = sheetXml.replace(/<sheetData>[\s\S]*?<\/sheetData>/, `<sheetData>${newRowsXml.join('')}</sheetData>`);
 
-  // Update mergeCells if delta > 0
   if (delta > 0) {
     sheetXml = sheetXml.replace(/<mergeCells[^>]*>([\s\S]*?)<\/mergeCells>/, (_m, inner) => {
       const shiftedInner = inner.replace(/<mergeCell ref="([A-Z]+)(\d+):([A-Z]+)(\d+)"\/>/g, (full: string, c1: string, r1: string, c2: string, r2: string) => {

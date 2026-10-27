@@ -107,9 +107,17 @@ class DatabaseStore {
         }
         if (
           !st.categories ||
+          st.categories.length < 16 ||
           !st.categories.some((c: any) => c.category_id === 'CAT-01' && Array.isArray(c.brand_configs) && c.brand_configs.length > 0)
         ) {
           st.categories = JSON.parse(JSON.stringify(INITIAL_CATEGORIES));
+          updated = true;
+        }
+        if (
+          !st.requests ||
+          !st.requests.some((r: any) => r.form_metadata)
+        ) {
+          st.requests = JSON.parse(JSON.stringify(INITIAL_REQUESTS));
           updated = true;
         }
         if (
@@ -618,6 +626,8 @@ class DatabaseStore {
     if (data.purpose !== undefined) req.purpose = data.purpose;
     if (data.priority !== undefined) req.priority = data.priority;
     if (data.lines !== undefined) req.lines = data.lines;
+    if (data.target_recipient_name !== undefined) req.target_recipient_name = data.target_recipient_name;
+    if (data.form_metadata !== undefined) req.form_metadata = data.form_metadata;
     if (data.attachment_file_name !== undefined) {
       if (data.attachment_file_name) {
         req.attachment_file = {
