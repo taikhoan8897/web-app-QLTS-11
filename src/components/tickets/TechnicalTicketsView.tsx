@@ -268,15 +268,14 @@ export const TechnicalTicketsView: React.FC<TechnicalTicketsViewProps> = ({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800 border border-purple-300">
-              Phân hệ Ticket Kỹ Thuật IT & Bảo Trì (UI08 & Mục 5.3.2)
+              Hỗ Trợ Kỹ Thuật IT & Bảo Trì Thiết Bị
             </span>
           </div>
           <h2 className="text-xl font-bold text-slate-900">
-            Tiếp Nhận & Xử Lý Sự Cố Kỹ Thuật / Bảo Trì Thiết Bị
+            Tiếp Nhận & Xử Lý Sự Cố Kỹ Thuật / Bảo Trì
           </h2>
           <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-            Quy trình khép kín 3 kịch bản: (1) Sửa tại chỗ, (2) Sửa chữa/thay thế ngoài, (3) Thu hồi cấp mới.
-            Khi duyệt phương án ký ngoài, hệ thống tự động sinh Yêu cầu cấp phát sang hàng đợi Thủ kho.
+            Tiếp nhận báo hỏng, chẩn đoán và xử lý theo các phương án: sửa chữa tại chỗ, sửa chữa/thay thế linh kiện hoặc thu hồi cấp mới.
           </p>
         </div>
 
@@ -497,7 +496,7 @@ export const TechnicalTicketsView: React.FC<TechnicalTicketsViewProps> = ({
                       Chỉnh Sửa Ticket Sự Cố [{editingTicket.ticket_code}]
                     </>
                   ) : (
-                    'Báo Cáo Sự Cố Kỹ Thuật IT / Bảo Trì (UI08)'
+                    'Báo Cáo Sự Cố Kỹ Thuật IT / Bảo Trì'
                   )}
                 </h3>
                 <p className="text-xs text-purple-200">
@@ -535,7 +534,7 @@ export const TechnicalTicketsView: React.FC<TechnicalTicketsViewProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Liên kết tài sản đang sở hữu (Không bắt buộc khi tạo - theo mục 5.3.2):
+                  Liên kết tài sản đang sở hữu (Không bắt buộc):
                 </label>
                 <select
                   value={newAssetId}
@@ -721,8 +720,7 @@ export const TechnicalTicketsView: React.FC<TechnicalTicketsViewProps> = ({
 
             <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
               <div className="p-3 bg-purple-50 rounded-xl border border-purple-200 text-purple-900 leading-relaxed">
-                Theo quy định mục 5.3.2 (Bước 33, 34, 35): Sau khi xuất file tờ trình ký ngoài và đính kèm hồ sơ phê duyệt,
-                hệ thống sẽ tự động sinh <strong className="underline">Đề xuất cấp phát từ CBNV</strong> gửi đến hàng đợi Thủ kho!
+                Sau khi xuất tờ trình và đính kèm hồ sơ phê duyệt, hệ thống sẽ tự động tạo <strong>Đề xuất cấp phát</strong> gửi đến hàng đợi Thủ kho.
               </div>
 
               <div>
@@ -937,7 +935,7 @@ export const TechnicalTicketsView: React.FC<TechnicalTicketsViewProps> = ({
                   </button>
                 </div>
                 <span className="text-[10px] text-slate-400 block">
-                  Theo Mục 5.3.2 Bước 35: Khi CBNV đính kèm file duyệt và bấm xác nhận, hệ thống sẽ tự động tạo Đề xuất cấp phát sang hàng đợi của Thủ kho.
+                  Khi đính kèm file duyệt và xác nhận, hệ thống sẽ tự động tạo Đề xuất cấp phát sang hàng đợi của Thủ kho.
                 </span>
               </div>
 

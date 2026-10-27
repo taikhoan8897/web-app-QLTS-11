@@ -163,7 +163,7 @@ export const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-700/80 text-emerald-200 border border-emerald-500/50">
-                Phân hệ Quản trị Kho Trung tâm THACO AGRI (UI01)
+                Quản Trị Kho Trung Tâm THACO AGRI
               </span>
               <span className="text-xs text-emerald-200/80">• Đơn vị: {currentWh?.name}</span>
             </div>
@@ -171,8 +171,7 @@ export const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({
               Dashboard Kiểm Soát Tồn Kho & Tài Sản
             </h1>
             <p className="text-xs text-emerald-100/80 mt-1 max-w-2xl leading-relaxed">
-              Theo dõi tồn khả dụng theo thời gian thực, giám sát vật tư tiêu hao theo 3 cột nghiệp vụ,
-              và kiểm soát vòng đời tài sản định danh từ khâu mua sắm đến thanh lý.
+              Theo dõi tồn kho khả dụng theo thời gian thực, giám sát vật tư tiêu hao và quản lý vòng đời tài sản định danh.
             </p>
           </div>
 

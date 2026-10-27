@@ -117,9 +117,18 @@ interface AppContextType {
       request_type: AssetRequest['request_type'];
       purpose: string;
       priority: AssetRequest['priority'];
-      lines: { category_id: string; qty_requested: number; note?: string }[];
+      lines: {
+        category_id: string;
+        qty_requested: number;
+        note?: string;
+        recipient_name?: string;
+        specifications?: string;
+      }[];
       attachment_file_name?: string;
       is_draft?: boolean;
+      target_recipient_name?: string;
+      target_employee_id?: string;
+      form_metadata?: AssetRequest['form_metadata'];
     }
   ) => { success: boolean; message: string };
 
@@ -129,9 +138,18 @@ interface AppContextType {
       request_type?: AssetRequest['request_type'];
       purpose?: string;
       priority?: AssetRequest['priority'];
-      lines?: { category_id: string; qty_requested: number; note?: string }[];
+      lines?: {
+        category_id: string;
+        qty_requested: number;
+        note?: string;
+        recipient_name?: string;
+        specifications?: string;
+      }[];
       attachment_file_name?: string;
       is_draft?: boolean;
+      target_recipient_name?: string;
+      target_employee_id?: string;
+      form_metadata?: AssetRequest['form_metadata'];
     }
   ) => { success: boolean; message: string };
 
@@ -661,9 +679,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     request_type: AssetRequest['request_type'];
     purpose: string;
     priority: AssetRequest['priority'];
-    lines: { category_id: string; qty_requested: number; note?: string }[];
+    lines: {
+      category_id: string;
+      qty_requested: number;
+      note?: string;
+      recipient_name?: string;
+      specifications?: string;
+    }[];
     attachment_file_name?: string;
     is_draft?: boolean;
+    target_recipient_name?: string;
+    target_employee_id?: string;
+    form_metadata?: AssetRequest['form_metadata'];
   }) => {
     // If submitting (not draft), check mandatory attachment rule (Mục 5.3.1 - bước 26)
     if (!data.is_draft && !data.attachment_file_name) {
@@ -674,7 +701,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const newReqId = `REQ-2026-${String(requests.length + 1).padStart(3, '0')}`;
-    const newReqCode = `YC-${Date.now().toString().slice(-4)}`;
+    const typePrefix =
+      data.request_type === 'CAP_VAN_PHONG_PHAM'
+        ? 'VPP'
+        : data.request_type === 'CAP_DONG_PHUC'
+        ? 'DP'
+        : data.request_type === 'CAP_MAY_TINH_LAPTOP'
+        ? 'MT'
+        : 'CNTT';
+    const newReqCode = `YC-${typePrefix}-${Date.now().toString().slice(-4)}`;
 
     const newLines: RequestLine[] = data.lines.map((l, idx) => ({
       request_line_id: `RQL-${Date.now()}-${idx}`,
@@ -685,6 +720,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       qty_issued: 0,
       qty_to_purchase: 0,
       note: l.note,
+      recipient_name: l.recipient_name,
+      specifications: l.specifications,
     }));
 
     const status: AssetRequest['status'] = data.is_draft ? 'NHAP' : 'CHO_TIEP_NHAN';
@@ -694,6 +731,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       request_code: newReqCode,
       requester_id: currentUser.employee_id,
       unit_id: currentUser.unit_id,
+      target_recipient_name: data.target_recipient_name || currentUser.full_name,
+      target_employee_id: data.target_employee_id,
       request_type: data.request_type,
       purpose: data.purpose,
       priority: data.priority,
@@ -707,6 +746,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         : undefined,
       created_at: new Date().toISOString(),
       lines: newLines,
+      form_metadata: data.form_metadata,
     };
 
     setRequests((prev) => [newRequest, ...prev]);
@@ -737,9 +777,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       request_type?: AssetRequest['request_type'];
       purpose?: string;
       priority?: AssetRequest['priority'];
-      lines?: { category_id: string; qty_requested: number; note?: string }[];
+      lines?: {
+        category_id: string;
+        qty_requested: number;
+        note?: string;
+        recipient_name?: string;
+        specifications?: string;
+      }[];
       attachment_file_name?: string;
       is_draft?: boolean;
+      target_recipient_name?: string;
+      target_employee_id?: string;
+      form_metadata?: AssetRequest['form_metadata'];
     }
   ) => {
     const target = requests.find((r) => r.request_id === requestId);
@@ -768,6 +817,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             qty_issued: existingLine?.qty_issued || 0,
             qty_to_purchase: Math.max(0, l.qty_requested - (existingLine?.qty_issued || 0)),
             note: l.note,
+            recipient_name: l.recipient_name,
+            specifications: l.specifications,
           };
         })
       : target.lines;
@@ -800,6 +851,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               lines: updatedLines,
               status: newStatus,
               attachment_file: newAttachment,
+              target_recipient_name: data.target_recipient_name ?? r.target_recipient_name,
+              target_employee_id: data.target_employee_id ?? r.target_employee_id,
+              form_metadata: data.form_metadata ?? r.form_metadata,
             }
           : r
       )

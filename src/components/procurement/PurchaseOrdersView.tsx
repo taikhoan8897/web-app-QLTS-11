@@ -479,15 +479,14 @@ export const PurchaseOrdersView: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-              Phân Hệ Quản Trị Đơn Hàng Mua Sắm (PO) & Gom Nhu Cầu - Mục 5.4
+              Quản Trị Đơn Hàng Mua Sắm (PO) & Gom Nhu Cầu
             </span>
           </div>
           <h2 className="text-xl font-bold text-slate-900">
             Trung Tâm Gom Đơn Hàng PO & Quản Lý Mua Sắm THACO AGRI
           </h2>
           <p className="text-xs text-slate-500 mt-1 max-w-3xl leading-relaxed">
-            Hệ thống tập hợp tự động mọi nhu cầu mua sắm từ <strong>3 nguồn nghiệp vụ</strong>: (1) Yêu cầu cấp phát của CBNV khi thiếu hàng tồn, (2) Đề xuất tự động từ Ticket kỹ thuật IT & bảo trì, (3) Nhu cầu dự phòng do Thủ kho tự tạo. 
-            <strong>Theo logic phân tích phần mềm:</strong> Hàng Định Danh và Hàng Tiêu Hao có quy trình nhập kho & vòng đời tách biệt hoàn toàn nên không tạo chung 1 PO.
+            Tổng hợp nhu cầu mua sắm từ yêu cầu cấp phát CBNV, đề xuất kỹ thuật IT và nhu cầu dự phòng kho. Đơn hàng Tài sản định danh và Vật tư tiêu hao được tách riêng để quản lý nhập kho chính xác.
           </p>
         </div>
 

@@ -259,6 +259,48 @@ export interface RequestLine {
   qty_issued: number;
   qty_to_purchase: number;
   note?: string;
+  recipient_name?: string;
+  specifications?: string;
+}
+
+export interface UniformRecipientItem {
+  category_id: string;
+  item_name: string;
+  unit_of_measure: string;
+  qty: number;
+  note?: string;
+}
+
+export interface UniformRecipientFormEntry {
+  full_name: string;
+  gender: 'Nam' | 'Nữ';
+  position: string;
+  contract_no?: string;
+  items: UniformRecipientItem[];
+}
+
+export interface RequestFormMetadata {
+  // Dùng chung
+  requester_name?: string;
+  requester_position?: string;
+  requester_department?: string;
+  requester_unit?: string;
+  purpose?: string;
+
+  // 2. Đồng phục (BM_DP01)
+  uniform_recipients?: UniformRecipientFormEntry[];
+
+  // 3. Máy tính / Laptop (BM_MT01)
+  computer_type?: 'DESKTOP' | 'LAPTOP';
+  block_name?: string;
+  user_full_name?: string;
+  user_position?: string;
+  user_department?: string;
+  user_section?: string;
+  start_date?: string;
+
+  // 4. Thiết bị CNTT (BM_CNTT01)
+  responsible_person?: string;
 }
 
 export interface Request {
@@ -266,6 +308,8 @@ export interface Request {
   request_code: string;
   requester_id: string;
   unit_id: string;
+  target_recipient_name?: string; // Tên người hiển thị trên yêu cầu theo quy tắc từng loại đề xuất
+  target_employee_id?: string;
   request_type: 
     | 'CAP_VAN_PHONG_PHAM' 
     | 'CAP_DONG_PHUC' 
@@ -283,6 +327,7 @@ export interface Request {
   created_at: string;
   lines: RequestLine[];
   po_id?: string;
+  form_metadata?: RequestFormMetadata;
 }
 
 export interface TicketMaterial {

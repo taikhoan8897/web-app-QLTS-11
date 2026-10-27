@@ -88,12 +88,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const currentWh = warehouses.find((w) => w.warehouse_id === selectedWarehouseId);
 
-  // Master Menu Definition with Strict Role-Based Access Control (Mục 3 & 11.1)
+  // Master Menu Definition with Strict Role-Based Access Control
   const allMenuItems: MenuItem[] = [
     {
       id: 'DASHBOARD',
       label: 'Dashboard Tổng Quan',
-      sub: 'UI01 Kiểm soát kho',
+      sub: 'Kiểm soát tồn kho & tài sản',
       icon: LayoutDashboard,
       allowedRoles: ['THU_KHO', 'QUAN_TRI', 'QUAN_LY'],
       badge: lowStockCount > 0 ? `${lowStockCount} cảnh báo` : undefined,
@@ -111,7 +111,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'REQUESTS',
       label: userRole === 'CBNV' ? 'Đề Xuất Cấp Phát' : 'Quản Lý Cấp Phát',
-      sub: userRole === 'CBNV' ? 'UI06 Tạo yêu cầu VPP/Laptop' : 'UI07 Hàng đợi Thủ kho',
+      sub: userRole === 'CBNV' ? 'Tạo yêu cầu VPP / Thiết bị' : 'Hàng đợi xử lý Thủ kho',
       icon: FileCheck,
       allowedRoles: ['CBNV', 'THU_KHO', 'THU_MUA', 'KY_THUAT', 'QUAN_TRI', 'QUAN_LY'],
       badge: userRole === 'CBNV' ? (myPendingRequests > 0 ? `${myPendingRequests} chờ duyệt` : undefined) : (pendingRequests > 0 ? `${pendingRequests} chờ duyệt` : undefined),
@@ -120,7 +120,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'TICKETS',
       label: 'Sự Cố IT & Bảo Trì',
-      sub: 'UI08 Báo lỗi & 3 kịch bản',
+      sub: 'Báo hỏng & Xử lý kỹ thuật',
       icon: Wrench,
       allowedRoles: ['CBNV', 'KY_THUAT', 'THU_KHO', 'QUAN_TRI', 'QUAN_LY'],
       badge: activeTickets > 0 ? `${activeTickets} đang xử lý` : undefined,
@@ -129,7 +129,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'ASSETS',
       label: 'Kho & Quản Lý Tài Sản',
-      sub: 'UI02-05 Nhập/Cấp/Thu/Thanh lý',
+      sub: 'Nhập, cấp phát, thu hồi, thanh lý',
       icon: Box,
       allowedRoles: ['THU_KHO', 'QUAN_TRI', 'QUAN_LY'],
       badge: pendingIdentifyPOs > 0 ? `${pendingIdentifyPOs} PO chờ định danh` : undefined,
@@ -138,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'PURCHASE_ORDERS',
       label: 'Đơn Hàng Thu Mua (PO)',
-      sub: 'UI09 Gom mua, giá & PO con',
+      sub: 'Gom mua sắm & Quản lý PO',
       icon: ShoppingCart,
       allowedRoles: ['THU_MUA', 'THU_KHO', 'QUAN_TRI', 'QUAN_LY'],
       badge: openDemandsCount > 0 ? `${openDemandsCount} chờ gom` : (pendingReceivePOs > 0 ? `${pendingReceivePOs} chờ nhập` : undefined),
@@ -154,7 +154,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'TRANSFERS',
       label: 'Điều Chuyển Kho',
-      sub: 'UI10 Đổi đơn vị sở hữu',
+      sub: 'Luân chuyển tài sản liên kho',
       icon: ArrowLeftRight,
       allowedRoles: ['THU_KHO', 'QUAN_TRI', 'QUAN_LY'],
     },
