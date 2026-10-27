@@ -1,0 +1,6 @@
+{
+  "name": "THACO AGRI - Quản lý Tài sản & Thu mua",
+  "description": "Hệ thống quản lý tài sản định danh, vật tư tiêu hao, yêu cầu cấp phát, ticket hỗ trợ kỹ thuật, đơn hàng thu mua PO và vòng đời tài sản THACO AGRI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
