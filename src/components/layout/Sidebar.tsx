@@ -168,9 +168,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'SQL_ADMIN',
       label: 'Cấu Hình & Quản Trị Hệ Thống',
-      sub: 'NCC, Đơn vị, Kho, HRM & SQL',
+      sub: 'Cây Chi phí, Danh mục, Kho, HRM',
       icon: Database,
-      allowedRoles: ['QUAN_TRI', 'QUAN_LY'],
+      allowedRoles: ['THU_KHO', 'THU_MUA', 'QUAN_TRI', 'QUAN_LY'],
     },
   ];
 

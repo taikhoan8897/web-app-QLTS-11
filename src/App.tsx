@@ -24,7 +24,7 @@ import { PurchaseOrdersView } from './components/procurement/PurchaseOrdersView'
 import { ServiceExpensesView } from './components/expenses/ServiceExpensesView';
 import { TransfersView } from './components/transfers/TransfersView';
 import { ReportsView } from './components/reports/ReportsView';
-import { SqlServerAdminView } from './components/admin/SqlServerAdminView';
+import { SqlServerAdminView, AdminSubTab } from './components/admin/SqlServerAdminView';
 import { FormTemplatesModal, TemplateType } from './components/forms/FormTemplatesModal';
 import { AssetProfileModal } from './components/assets/AssetProfileModal';
 import { Asset } from './types';
@@ -37,6 +37,7 @@ const MainLayout: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>(
     currentUser.role === 'CBNV' ? 'MY_ASSETS' : 'DASHBOARD'
   );
+  const [adminInitialSubTab, setAdminInitialSubTab] = useState<AdminSubTab>('SERVICE_EXPENSE_CATEGORIES');
 
   // Automatically enforce RBAC when switching users
   useEffect(() => {
@@ -46,7 +47,7 @@ const MainLayout: React.FC = () => {
         setActiveTab('MY_ASSETS');
       }
     } else if (currentUser.role === 'THU_MUA') {
-      const allowedForThuMua: ActiveTab[] = ['PURCHASE_ORDERS', 'SERVICE_EXPENSES', 'REPORTS', 'REQUESTS', 'MY_ASSETS'];
+      const allowedForThuMua: ActiveTab[] = ['PURCHASE_ORDERS', 'SERVICE_EXPENSES', 'REPORTS', 'REQUESTS', 'MY_ASSETS', 'SQL_ADMIN'];
       if (!allowedForThuMua.includes(activeTab)) {
         setActiveTab('PURCHASE_ORDERS');
       }
@@ -174,7 +175,14 @@ const MainLayout: React.FC = () => {
 
           {activeTab === 'PURCHASE_ORDERS' && <PurchaseOrdersView />}
 
-          {activeTab === 'SERVICE_EXPENSES' && <ServiceExpensesView />}
+          {activeTab === 'SERVICE_EXPENSES' && (
+            <ServiceExpensesView
+              onOpenCategoryConfig={() => {
+                setAdminInitialSubTab('SERVICE_EXPENSE_CATEGORIES');
+                setActiveTab('SQL_ADMIN');
+              }}
+            />
+          )}
 
           {activeTab === 'TRANSFERS' && (
             <TransfersView
@@ -185,7 +193,9 @@ const MainLayout: React.FC = () => {
 
           {activeTab === 'REPORTS' && <ReportsView />}
 
-          {activeTab === 'SQL_ADMIN' && <SqlServerAdminView />}
+          {activeTab === 'SQL_ADMIN' && (
+            <SqlServerAdminView initialSubTab={adminInitialSubTab} />
+          )}
         </main>
       </div>
 

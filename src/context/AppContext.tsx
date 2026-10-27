@@ -314,7 +314,7 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'THACO_AGRI_ASSET_MGMT_STATE_V2';
+const STORAGE_KEY = 'THACO_AGRI_ASSET_MGMT_STATE_V4';
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Load state from localStorage or initial mock data
@@ -402,8 +402,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (serverData.transfers) setTransfers(serverData.transfers);
           if (serverData.auditLogs) setAuditLogs(serverData.auditLogs);
           if (serverData.transactions) setTransactions(serverData.transactions);
-          if (serverData.expenseCategories) setExpenseCategories(serverData.expenseCategories);
-          if (serverData.serviceExpenses) setServiceExpenses(serverData.serviceExpenses);
+          const normalizeRootType = (val?: string) =>
+            val
+              ? val
+                  .replace(/^V\.\s*CHI PHÍ VẬN HÀNH & CÔNG TÁC/i, '1. CHI PHÍ VẬN HÀNH & CÔNG TÁC')
+                  .replace(/^VI\.\s*CHI PHÍ GIAO TẾ & PHÚC LỢI/i, '2. CHI PHÍ GIAO TẾ & PHÚC LỢI')
+              : val;
+
+          if (serverData.expenseCategories && serverData.expenseCategories.length >= 40) {
+            setExpenseCategories(
+              serverData.expenseCategories.map((c: ExpenseCategory) => ({
+                ...c,
+                category_type: normalizeRootType(c.category_type) || c.category_type,
+              }))
+            );
+          } else {
+            setExpenseCategories(INITIAL_EXPENSE_CATEGORIES);
+          }
+          if (serverData.serviceExpenses && serverData.serviceExpenses.length > 0) {
+            setServiceExpenses(
+              serverData.serviceExpenses.map((e: ServiceExpense) => ({
+                ...e,
+                category_type: normalizeRootType(e.category_type) || e.category_type,
+              }))
+            );
+          } else {
+            setServiceExpenses(INITIAL_SERVICE_EXPENSES);
+          }
         }
       } catch (err) {
         console.info('[Client] Running with local state cache while server is initializing');
@@ -2934,7 +2959,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         expense_category_id: `EPC-${Date.now().toString().slice(-4)}`,
         code: data.code || `CP-${Date.now().toString().slice(-4)}`,
         name: data.name,
-        category_type: data.category_type || 'Chi phí dịch vụ chung',
+        group_code: data.group_code || 'CPVH-CT-MS',
+        group_name: data.group_name || 'Di chuyển, lưu trú (Công tác & Tiếp khách)',
+        category_type: data.category_type || 'V. CHI PHÍ VẬN HÀNH & CÔNG TÁC',
         description: data.description || '',
         is_active: data.is_active !== undefined ? !!data.is_active : true,
         created_at: new Date().toISOString(),
@@ -2986,6 +3013,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         occurred_at: data.occurred_at || new Date().toISOString(),
         expense_category_id: data.expense_category_id,
         expense_name: data.expense_name,
+        group_code: data.group_code || '',
+        group_name: data.group_name || '',
         category_type: data.category_type,
         supplier_id: data.supplier_id,
         supplier_name: data.supplier_name,

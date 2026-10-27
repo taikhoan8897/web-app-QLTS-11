@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Database, 
   ShieldCheck, 
@@ -45,7 +45,24 @@ import { SQL_SERVER_SCHEMA_SCRIPT } from '../../utils/sqlServerScript';
 import { formatDateVN, formatVND } from '../../utils/excelExporter';
 import { Supplier, OrganizationUnit, Department, Warehouse, Employee, UserRole, Category, TrackingType, ExpenseCategory } from '../../types';
 
-export const SqlServerAdminView: React.FC = () => {
+export type AdminSubTab = 
+  | 'SERVICE_EXPENSE_CATEGORIES'
+  | 'CATEGORIES'
+  | 'SUPPLIERS' 
+  | 'UNITS' 
+  | 'DEPARTMENTS' 
+  | 'USERS_HRM' 
+  | 'ORG_HIERARCHY' 
+  | 'WAREHOUSES' 
+  | 'RBAC' 
+  | 'SQL_STUDIO' 
+  | 'AUDIT_LOGS';
+
+interface SqlServerAdminViewProps {
+  initialSubTab?: AdminSubTab;
+}
+
+export const SqlServerAdminView: React.FC<SqlServerAdminViewProps> = ({ initialSubTab }) => {
   const { 
     employees, 
     units, 
@@ -78,20 +95,15 @@ export const SqlServerAdminView: React.FC = () => {
     deleteCategory
   } = useApp();
 
-  type AdminTab = 
-    | 'CATEGORIES'
-    | 'SUPPLIERS' 
-    | 'UNITS' 
-    | 'DEPARTMENTS' 
-    | 'USERS_HRM' 
-    | 'ORG_HIERARCHY' 
-    | 'WAREHOUSES' 
-    | 'RBAC' 
-    | 'SQL_STUDIO' 
-    | 'AUDIT_LOGS'
-    | 'SERVICE_EXPENSE_CATEGORIES';
+  const [activeSubTab, setActiveSubTab] = useState<AdminSubTab>(
+    initialSubTab || 'SERVICE_EXPENSE_CATEGORIES'
+  );
 
-  const [activeSubTab, setActiveSubTab] = useState<AdminTab>('USERS_HRM');
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
 
   // Notification state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -677,18 +689,96 @@ export const SqlServerAdminView: React.FC = () => {
   // TAB: DANH MỤC CHI PHÍ DỊCH VỤ STATE & HANDLERS
   // ==========================================
   const [expenseCatSearch, setExpenseCatSearch] = useState('');
+  const [expenseCatViewMode, setExpenseCatViewMode] = useState<'TREE' | 'TABLE'>('TREE');
   const STANDARD_EXPENSE_GROUPS = [
-    { code: 'CPVH-CT-MS', name: 'Di chuyển, lưu trú (Công tác & Tiếp khách)', root: 'V. CHI PHÍ VẬN HÀNH & CÔNG TÁC' },
-    { code: 'CPVH-CT-TK', name: 'Ăn uống, hội nghị (Công tác & Tiếp khách)', root: 'V. CHI PHÍ VẬN HÀNH & CÔNG TÁC' },
-    { code: 'CPVH-VP-SUA', name: 'Bảo trì & Sửa chữa (Văn phòng & Hạ tầng)', root: 'V. CHI PHÍ VẬN HÀNH & CÔNG TÁC' },
-    { code: 'CPVH-VP-THU', name: 'Thuê ngoài (Văn phòng & Hạ tầng)', root: 'V. CHI PHÍ VẬN HÀNH & CÔNG TÁC' },
-    { code: 'CPVH-VP-VT', name: 'Viễn thông & Chuyển phát (Văn phòng & Hạ tầng)', root: 'V. CHI PHÍ VẬN HÀNH & CÔNG TÁC' },
-    { code: 'CPVH-VP-MT', name: 'Môi trường & Tiện ích (Văn phòng & Hạ tầng)', root: 'V. CHI PHÍ VẬN HÀNH & CÔNG TÁC' },
-    { code: 'CPVH-NL-SH', name: 'Điện nước sinh hoạt (Năng lượng & Nhiên liệu)', root: 'V. CHI PHÍ VẬN HÀNH & CÔNG TÁC' },
-    { code: 'CPVH-NL-XE', name: 'Xăng dầu (Năng lượng & Nhiên liệu)', root: 'V. CHI PHÍ VẬN HÀNH & CÔNG TÁC' },
-    { code: 'CPVH-XE', name: 'Phí xe & Phí hành chính (CPVH-XE)', root: 'V. CHI PHÍ VẬN HÀNH & CÔNG TÁC' },
-    { code: 'CPPL-NV', name: 'Phúc lợi Nội bộ CB-NV (CPPL-NV)', root: 'VI. CHI PHÍ GIAO TẾ & PHÚC LỢI' },
-    { code: 'CPPL-KH', name: 'Giao tế Đối ngoại (CPPL-KH)', root: 'VI. CHI PHÍ GIAO TẾ & PHÚC LỢI' },
+    {
+      code: 'CPVH-CT-MS',
+      name: 'Di chuyển, lưu trú (Công tác & Tiếp khách)',
+      sub_title: 'Di chuyển, lưu trú',
+      parent_name: 'Chi phí Công tác & Tiếp khách (CPVH-CT)',
+      root_code: 'CPVH' as const,
+      root: '1. CHI PHÍ VẬN HÀNH & CÔNG TÁC',
+    },
+    {
+      code: 'CPVH-CT-TK',
+      name: 'Ăn uống, hội nghị (Công tác & Tiếp khách)',
+      sub_title: 'Ăn uống, hội nghị',
+      parent_name: 'Chi phí Công tác & Tiếp khách (CPVH-CT)',
+      root_code: 'CPVH' as const,
+      root: '1. CHI PHÍ VẬN HÀNH & CÔNG TÁC',
+    },
+    {
+      code: 'CPVH-VP-SUA',
+      name: 'Bảo trì & Sửa chữa (Văn phòng & Hạ tầng)',
+      sub_title: 'Bảo trì & Sửa chữa',
+      parent_name: 'Chi phí văn phòng & Hạ tầng (CPVH-VP)',
+      root_code: 'CPVH' as const,
+      root: '1. CHI PHÍ VẬN HÀNH & CÔNG TÁC',
+    },
+    {
+      code: 'CPVH-VP-THU',
+      name: 'Thuê ngoài (Văn phòng & Hạ tầng)',
+      sub_title: 'Thuê ngoài',
+      parent_name: 'Chi phí văn phòng & Hạ tầng (CPVH-VP)',
+      root_code: 'CPVH' as const,
+      root: '1. CHI PHÍ VẬN HÀNH & CÔNG TÁC',
+    },
+    {
+      code: 'CPVH-VP-VT',
+      name: 'Viễn thông & Chuyển phát (Văn phòng & Hạ tầng)',
+      sub_title: 'Viễn thông & Chuyển phát',
+      parent_name: 'Chi phí văn phòng & Hạ tầng (CPVH-VP)',
+      root_code: 'CPVH' as const,
+      root: '1. CHI PHÍ VẬN HÀNH & CÔNG TÁC',
+    },
+    {
+      code: 'CPVH-VP-MT',
+      name: 'Môi trường & Tiện ích (Văn phòng & Hạ tầng)',
+      sub_title: 'Môi trường & Tiện ích',
+      parent_name: 'Chi phí văn phòng & Hạ tầng (CPVH-VP)',
+      root_code: 'CPVH' as const,
+      root: '1. CHI PHÍ VẬN HÀNH & CÔNG TÁC',
+    },
+    {
+      code: 'CPVH-NL-SH',
+      name: 'Điện nước sinh hoạt (Năng lượng & Nhiên liệu)',
+      sub_title: 'Điện nước sinh hoạt',
+      parent_name: 'Chi phí Năng lượng & Nhiên liệu (CPVH-NL)',
+      root_code: 'CPVH' as const,
+      root: '1. CHI PHÍ VẬN HÀNH & CÔNG TÁC',
+    },
+    {
+      code: 'CPVH-NL-XE',
+      name: 'Xăng dầu (Năng lượng & Nhiên liệu)',
+      sub_title: 'Xăng dầu',
+      parent_name: 'Chi phí Năng lượng & Nhiên liệu (CPVH-NL)',
+      root_code: 'CPVH' as const,
+      root: '1. CHI PHÍ VẬN HÀNH & CÔNG TÁC',
+    },
+    {
+      code: 'CPVH-XE',
+      name: 'Phí xe & Phí hành chính (CPVH-XE)',
+      sub_title: 'Các loại phí & Sửa chữa xe',
+      parent_name: 'Chi phí xe & Phí hành chính (CPVH-XE)',
+      root_code: 'CPVH' as const,
+      root: '1. CHI PHÍ VẬN HÀNH & CÔNG TÁC',
+    },
+    {
+      code: 'CPPL-NV',
+      name: 'Phúc lợi Nội bộ CB-NV (CPPL-NV)',
+      sub_title: 'Phúc lợi Nội bộ (CB-NV)',
+      parent_name: 'Phúc lợi Nội bộ (CB-NV) (CPPL-NV)',
+      root_code: 'CPPL' as const,
+      root: '2. CHI PHÍ GIAO TẾ & PHÚC LỢI',
+    },
+    {
+      code: 'CPPL-KH',
+      name: 'Giao tế Đối ngoại (CPPL-KH)',
+      sub_title: 'Giao tế Đối ngoại',
+      parent_name: 'Giao tế Đối ngoại (CPPL-KH)',
+      root_code: 'CPPL' as const,
+      root: '2. CHI PHÍ GIAO TẾ & PHÚC LỢI',
+    },
   ];
 
   const [expenseCatGroupFilter, setExpenseCatGroupFilter] = useState('ALL');
@@ -700,7 +790,7 @@ export const SqlServerAdminView: React.FC = () => {
     name: '',
     group_code: 'CPVH-CT-MS',
     group_name: 'Di chuyển, lưu trú (Công tác & Tiếp khách)',
-    category_type: 'V. CHI PHÍ VẬN HÀNH & CÔNG TÁC',
+    category_type: '1. CHI PHÍ VẬN HÀNH & CÔNG TÁC',
     description: '',
     is_active: true,
   });
@@ -709,9 +799,11 @@ export const SqlServerAdminView: React.FC = () => {
     new Set(expenseCategories.map((c) => c.category_type).filter(Boolean))
   );
 
-  const handleOpenAddExpenseCat = () => {
+  const handleOpenAddExpenseCat = (defaultGroupCode?: string) => {
     setEditingExpenseCat(null);
-    const defGroup = STANDARD_EXPENSE_GROUPS[0];
+    const defGroup =
+      STANDARD_EXPENSE_GROUPS.find((g) => g.code === defaultGroupCode) ||
+      STANDARD_EXPENSE_GROUPS[0];
     const groupCount = expenseCategories.filter((c) => c.group_code === defGroup.code).length + 1;
     setExpenseCatForm({
       code: `${defGroup.code}-${String(groupCount).padStart(2, '0')}`,
@@ -813,138 +905,138 @@ export const SqlServerAdminView: React.FC = () => {
         </div>
       </div>
 
-      {/* Top Navigation Sub Tabs */}
-      <div className="flex border-b border-slate-200 bg-white rounded-t-2xl px-4 pt-3 gap-2 overflow-x-auto text-xs font-bold scrollbar-none">
+      {/* Top Navigation Sub Tabs (Wrapped Grid so all 11 tabs are immediately visible) */}
+      <div className="flex flex-wrap items-center gap-2 bg-white rounded-2xl p-3 border border-slate-200 shadow-xs text-xs font-bold">
+        <button
+          onClick={() => setActiveSubTab('SERVICE_EXPENSE_CATEGORIES')}
+          className={`px-3.5 py-2 rounded-xl flex items-center gap-2 transition cursor-pointer border ${
+            activeSubTab === 'SERVICE_EXPENSE_CATEGORIES'
+              ? 'bg-emerald-800 text-white border-emerald-800 shadow-xs'
+              : 'bg-emerald-50/70 border-emerald-200 text-emerald-900 hover:bg-emerald-100'
+          }`}
+        >
+          <FolderTree className={`w-4 h-4 ${activeSubTab === 'SERVICE_EXPENSE_CATEGORIES' ? 'text-emerald-300' : 'text-emerald-700'}`} />
+          1. Cây Danh Mục Chi Phí ({expenseCategories.length})
+        </button>
+
         <button
           onClick={() => setActiveSubTab('USERS_HRM')}
-          className={`pb-3 px-3 flex items-center gap-2 transition cursor-pointer border-b-2 whitespace-nowrap ${
+          className={`px-3 py-2 rounded-xl flex items-center gap-2 transition cursor-pointer border ${
             activeSubTab === 'USERS_HRM'
-              ? 'border-emerald-700 text-emerald-800'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
           }`}
         >
           <Users className="w-4 h-4" />
-          1. Bảng Nhân Viên ({employees.length})
+          2. Bảng Nhân Viên ({employees.length})
         </button>
 
         <button
           onClick={() => setActiveSubTab('DEPARTMENTS')}
-          className={`pb-3 px-3 flex items-center gap-2 transition cursor-pointer border-b-2 whitespace-nowrap ${
+          className={`px-3 py-2 rounded-xl flex items-center gap-2 transition cursor-pointer border ${
             activeSubTab === 'DEPARTMENTS'
-              ? 'border-emerald-700 text-emerald-800'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
           }`}
         >
           <Briefcase className="w-4 h-4" />
-          2. Bảng Phòng Ban ({departments.length})
+          3. Bảng Phòng Ban ({departments.length})
         </button>
 
         <button
           onClick={() => setActiveSubTab('UNITS')}
-          className={`pb-3 px-3 flex items-center gap-2 transition cursor-pointer border-b-2 whitespace-nowrap ${
+          className={`px-3 py-2 rounded-xl flex items-center gap-2 transition cursor-pointer border ${
             activeSubTab === 'UNITS'
-              ? 'border-emerald-700 text-emerald-800'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
           }`}
         >
           <Building2 className="w-4 h-4" />
-          3. Bảng Đơn Vị ({units.length})
+          4. Bảng Đơn Vị ({units.length})
         </button>
 
         <button
           onClick={() => setActiveSubTab('ORG_HIERARCHY')}
-          className={`pb-3 px-3 flex items-center gap-2 transition cursor-pointer border-b-2 whitespace-nowrap ${
+          className={`px-3 py-2 rounded-xl flex items-center gap-2 transition cursor-pointer border ${
             activeSubTab === 'ORG_HIERARCHY'
-              ? 'border-emerald-700 text-emerald-800'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
           }`}
         >
-          <FolderTree className="w-4 h-4 text-emerald-700" />
-          4. Cây Quan Hệ 3 Bảng
+          <FolderTree className="w-4 h-4" />
+          5. Cây Quan Hệ 3 Bảng
         </button>
 
         <button
           onClick={() => setActiveSubTab('SUPPLIERS')}
-          className={`pb-3 px-3 flex items-center gap-2 transition cursor-pointer border-b-2 whitespace-nowrap ${
+          className={`px-3 py-2 rounded-xl flex items-center gap-2 transition cursor-pointer border ${
             activeSubTab === 'SUPPLIERS'
-              ? 'border-emerald-700 text-emerald-800'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
           }`}
         >
           <Truck className="w-4 h-4" />
-          5. Nhà Cung Cấp ({suppliers.length})
+          6. Nhà Cung Cấp ({suppliers.length})
         </button>
 
         <button
           onClick={() => setActiveSubTab('CATEGORIES')}
-          className={`pb-3 px-3 flex items-center gap-2 transition cursor-pointer border-b-2 whitespace-nowrap ${
+          className={`px-3 py-2 rounded-xl flex items-center gap-2 transition cursor-pointer border ${
             activeSubTab === 'CATEGORIES'
-              ? 'border-emerald-700 text-emerald-800'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
           }`}
         >
           <Layers className="w-4 h-4" />
-          6. Danh Mục Hàng Hóa ({categories.length})
+          7. Danh Mục Hàng Hóa ({categories.length})
         </button>
 
         <button
           onClick={() => setActiveSubTab('WAREHOUSES')}
-          className={`pb-3 px-3 flex items-center gap-2 transition cursor-pointer border-b-2 whitespace-nowrap ${
+          className={`px-3 py-2 rounded-xl flex items-center gap-2 transition cursor-pointer border ${
             activeSubTab === 'WAREHOUSES'
-              ? 'border-emerald-700 text-emerald-800'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
           }`}
         >
           <WarehouseIcon className="w-4 h-4" />
-          7. Bảng Kho ({warehouses.length})
+          8. Bảng Kho ({warehouses.length})
         </button>
 
         <button
           onClick={() => setActiveSubTab('RBAC')}
-          className={`pb-3 px-3 flex items-center gap-2 transition cursor-pointer border-b-2 whitespace-nowrap ${
+          className={`px-3 py-2 rounded-xl flex items-center gap-2 transition cursor-pointer border ${
             activeSubTab === 'RBAC'
-              ? 'border-emerald-700 text-emerald-800'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
           }`}
         >
           <ShieldCheck className="w-4 h-4" />
-          8. Ma Trận Phân Quyền
+          9. Ma Trận Phân Quyền
         </button>
 
         <button
           onClick={() => setActiveSubTab('SQL_STUDIO')}
-          className={`pb-3 px-3 flex items-center gap-2 transition cursor-pointer border-b-2 whitespace-nowrap ${
+          className={`px-3 py-2 rounded-xl flex items-center gap-2 transition cursor-pointer border ${
             activeSubTab === 'SQL_STUDIO'
-              ? 'border-emerald-700 text-emerald-800'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
           }`}
         >
           <Code className="w-4 h-4" />
-          9. SQL Server 2022
+          10. SQL Server 2022
         </button>
 
         <button
           onClick={() => setActiveSubTab('AUDIT_LOGS')}
-          className={`pb-3 px-3 flex items-center gap-2 transition cursor-pointer border-b-2 whitespace-nowrap ${
+          className={`px-3 py-2 rounded-xl flex items-center gap-2 transition cursor-pointer border ${
             activeSubTab === 'AUDIT_LOGS'
-              ? 'border-emerald-700 text-emerald-800'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
           }`}
         >
           <History className="w-4 h-4" />
-          10. Sổ Kiểm Toán ({auditLogs.length})
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('SERVICE_EXPENSE_CATEGORIES')}
-          className={`pb-3 px-3 flex items-center gap-2 transition cursor-pointer border-b-2 whitespace-nowrap ${
-            activeSubTab === 'SERVICE_EXPENSE_CATEGORIES'
-              ? 'border-emerald-700 text-emerald-800'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <ReceiptText className="w-4 h-4 text-emerald-700" />
-          11. Danh Mục Chi Phí Dịch Vụ ({expenseCategories.length})
+          11. Sổ Kiểm Toán ({auditLogs.length})
         </button>
       </div>
 
@@ -2361,27 +2453,56 @@ export const SqlServerAdminView: React.FC = () => {
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-400/20 text-emerald-300 border border-emerald-400/40 flex items-center gap-1">
-                  <ReceiptText className="w-3.5 h-3.5" />
-                  Cấu Hình Chi Phí Dịch Vụ
+                  <FolderTree className="w-3.5 h-3.5" />
+                  Cây Cấu Hình Danh Mục Chi Phí Chuẩn THACO AGRI
                 </span>
-                <span className="text-xs text-emerald-300 font-mono">TÊN CHI PHÍ ➔ LOẠI ÁP DỤNG</span>
+                <span className="text-xs text-emerald-300 font-mono">1. CPVH & 2. CPPL (3 TẦNG)</span>
               </div>
               <h3 className="text-base font-bold">
-                Danh Mục Tên Chi Phí & Loại Áp Dụng Chi Phí Dịch Vụ
+                Cấu Hình Cây Danh Mục Chi Phí Vận Hành (CPVH) & Giao Tế Phúc Lợi (CPPL)
               </h3>
-              <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-                Chuẩn hóa các hạng mục dịch vụ thuê ngoài (bảo trì máy chủ/thiết bị IT, cước viễn thông, kiểm định xe nâng/PCCC, vận chuyển bốc xếp...).
-                Khi nhập chi phí dịch vụ, người dùng sẽ chọn trực tiếp từ danh sách này giúp số liệu đồng bộ và chính xác.
+              <p className="text-xs text-slate-300 max-w-3xl leading-relaxed">
+                Quản lý tập trung cây danh mục chi phí chuẩn 3 tầng của THACO AGRI ({STANDARD_EXPENSE_GROUPS.length} nhóm cha • {expenseCategories.length} khoản mục chi tiết).
+                Mọi thay đổi tại đây được đồng bộ tức thì sang màn hình <strong>Chi Phí Dịch Vụ</strong> để CBNV/Thu mua chọn nhanh khi lập phiếu.
               </p>
             </div>
 
-            <button
-              onClick={handleOpenAddExpenseCat}
-              className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs shadow-lg flex items-center gap-2 shrink-0 cursor-pointer transition transform hover:-translate-y-0.5"
-            >
-              <Plus className="w-4 h-4" />
-              + Thêm Danh Mục Chi Phí
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="bg-slate-800/90 p-1 rounded-xl border border-slate-700 flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setExpenseCatViewMode('TREE')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition ${
+                    expenseCatViewMode === 'TREE'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  <FolderTree className="w-3.5 h-3.5" />
+                  Sơ Đồ Cây Phân Cấp
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExpenseCatViewMode('TABLE')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition ${
+                    expenseCatViewMode === 'TABLE'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  Bảng Chi Tiết
+                </button>
+              </div>
+
+              <button
+                onClick={() => handleOpenAddExpenseCat()}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-lg flex items-center gap-2 shrink-0 cursor-pointer transition"
+              >
+                <Plus className="w-4 h-4" />
+                + Thêm Mục Chi Phí
+              </button>
+            </div>
           </div>
 
           {/* Controls Bar */}
@@ -2412,13 +2533,13 @@ export const SqlServerAdminView: React.FC = () => {
                 ))}
               </select>
 
-              {/* Filter by Category Type */}
+              {/* Filter by Root Category Type */}
               <select
                 value={expenseCatTypeFilter}
                 onChange={(e) => setExpenseCatTypeFilter(e.target.value)}
                 className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-emerald-600"
               >
-                <option value="ALL">Tất cả Loại áp dụng ({configuredCategoryTypes.length})</option>
+                <option value="ALL">Tất cả Khối Chi Phí ({configuredCategoryTypes.length})</option>
                 {configuredCategoryTypes.map((t) => (
                   <option key={t} value={t}>
                     {t}
@@ -2428,89 +2549,243 @@ export const SqlServerAdminView: React.FC = () => {
             </div>
 
             <span className="text-xs text-slate-500 font-medium">
-              Hiển thị <strong className="text-slate-900">{filteredExpenseCategories.length}</strong> / {expenseCategories.length} danh mục chi phí
+              Hiển thị <strong className="text-slate-900">{filteredExpenseCategories.length}</strong> / {expenseCategories.length} khoản mục chi phí
             </span>
           </div>
 
-          {/* Table */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
-                    <th className="py-3 px-4 text-center w-12">STT</th>
-                    <th className="py-3 px-4">Nhóm Chi Phí</th>
-                    <th className="py-3 px-4">Mã Chi Phí</th>
-                    <th className="py-3 px-4">Tên Chi Phí</th>
-                    <th className="py-3 px-4">Loại Áp Dụng</th>
-                    <th className="py-3 px-4">Diễn Giải Quy Chuẩn</th>
-                    <th className="py-3 px-4 text-center">Trạng Thái</th>
-                    <th className="py-3 px-4 text-center w-24">Thao Tác</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {filteredExpenseCategories.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="py-10 text-center text-slate-400">
-                        Không có danh mục chi phí nào phù hợp với bộ lọc tìm kiếm.
-                      </td>
+          {expenseCatViewMode === 'TREE' ? (
+            <div className="space-y-6">
+              {(['1. CHI PHÍ VẬN HÀNH & CÔNG TÁC', '2. CHI PHÍ GIAO TẾ & PHÚC LỢI'] as const)
+                .filter((rootTitle) => expenseCatTypeFilter === 'ALL' || expenseCatTypeFilter === rootTitle)
+                .map((rootTitle) => {
+                  const isCPVH = rootTitle.startsWith('1.');
+                  const rootGroups = STANDARD_EXPENSE_GROUPS.filter(
+                    (g) =>
+                      g.root === rootTitle &&
+                      (expenseCatGroupFilter === 'ALL' || g.code === expenseCatGroupFilter)
+                  );
+                  if (rootGroups.length === 0) return null;
+
+                  return (
+                    <div key={rootTitle} className="space-y-3">
+                      {/* Root Tier Banner */}
+                      <div
+                        className={`px-4 py-2.5 rounded-xl border flex items-center justify-between ${
+                          isCPVH
+                            ? 'bg-emerald-900 text-white border-emerald-800'
+                            : 'bg-amber-900 text-white border-amber-800'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="px-2 py-0.5 rounded bg-white/15 font-mono text-xs font-bold">
+                            Mã gốc: {isCPVH ? 'CPVH' : 'CPPL'}
+                          </span>
+                          <span className="font-bold text-sm">{rootTitle}</span>
+                        </div>
+                        <span className="text-xs text-white/80 font-medium">
+                          {rootGroups.length} phân nhóm
+                        </span>
+                      </div>
+
+                      {/* 2-Column Sub-Group Tree Cards */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {rootGroups.map((grp) => {
+                          const items = filteredExpenseCategories.filter((c) => c.group_code === grp.code);
+                          return (
+                            <div
+                              key={grp.code}
+                              className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col"
+                            >
+                              {/* Card Header */}
+                              <div
+                                className={`px-4 py-3 border-b flex items-center justify-between ${
+                                  isCPVH
+                                    ? 'bg-emerald-50/70 border-emerald-100'
+                                    : 'bg-amber-50/70 border-amber-100'
+                                }`}
+                              >
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold ${
+                                        isCPVH
+                                          ? 'bg-emerald-800 text-white'
+                                          : 'bg-amber-700 text-white'
+                                      }`}
+                                    >
+                                      {grp.code}
+                                    </span>
+                                    <span className="text-xs font-bold text-slate-900">
+                                      {grp.sub_title}
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-slate-500 mt-0.5">
+                                    {grp.parent_name}
+                                  </p>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[11px] font-bold text-slate-600 bg-white px-2.5 py-1 rounded-full border border-slate-200">
+                                    {items.length} mục
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenAddExpenseCat(grp.code)}
+                                    className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 cursor-pointer transition"
+                                    title={`Thêm khoản mục con vào nhóm ${grp.code}`}
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                    Thêm mục con
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Items List */}
+                              <div className="p-3 divide-y divide-slate-100 flex-1">
+                                {items.length === 0 ? (
+                                  <div className="py-6 text-center text-xs text-slate-400">
+                                    Chưa có khoản mục chi phí nào khớp bộ lọc trong nhóm này.
+                                  </div>
+                                ) : (
+                                  items.map((item) => (
+                                    <div
+                                      key={item.expense_category_id}
+                                      className="py-2 px-2 flex items-center justify-between hover:bg-slate-50 rounded-lg transition group"
+                                    >
+                                      <div className="flex items-start gap-2.5 min-w-0 pr-2">
+                                        <span className="font-mono text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 shrink-0 mt-0.5">
+                                          {item.code}
+                                        </span>
+                                        <div className="min-w-0">
+                                          <p className="text-xs font-bold text-slate-800 truncate">
+                                            {item.name}
+                                          </p>
+                                          {item.description && (
+                                            <p className="text-[11px] text-slate-500 line-clamp-1">
+                                              {item.description}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        {!item.is_active && (
+                                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-500 border border-slate-200 mr-1">
+                                            Tạm ngưng
+                                          </span>
+                                        )}
+                                        <button
+                                          type="button"
+                                          onClick={() => handleOpenEditExpenseCat(item)}
+                                          className="p-1 text-blue-600 hover:bg-blue-50 rounded cursor-pointer"
+                                          title="Sửa khoản mục chi phí"
+                                        >
+                                          <Edit3 className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            handleDeleteExpenseCat(item.expense_category_id, item.name)
+                                          }
+                                          className="p-1 text-red-600 hover:bg-red-50 rounded cursor-pointer"
+                                          title="Xóa khoản mục chi phí"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          ) : (
+            /* Table View */
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
+                      <th className="py-3 px-4 text-center w-12">STT</th>
+                      <th className="py-3 px-4">Nhóm Chi Phí</th>
+                      <th className="py-3 px-4">Mã Chi Phí</th>
+                      <th className="py-3 px-4">Tên Chi Phí</th>
+                      <th className="py-3 px-4">Loại Áp Dụng</th>
+                      <th className="py-3 px-4">Diễn Giải Quy Chuẩn</th>
+                      <th className="py-3 px-4 text-center">Trạng Thái</th>
+                      <th className="py-3 px-4 text-center w-24">Thao Tác</th>
                     </tr>
-                  ) : (
-                    filteredExpenseCategories.map((c, idx) => (
-                      <tr key={c.expense_category_id} className="hover:bg-slate-50 transition">
-                        <td className="py-3 px-4 text-center text-slate-400 font-medium">{idx + 1}</td>
-                        <td className="py-3 px-4">
-                          <span className="font-mono font-bold text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200 block w-max mb-0.5">
-                            {c.group_code || 'CPVH'}
-                          </span>
-                          <span className="text-[11px] font-semibold text-slate-600 block line-clamp-1" title={c.group_name}>
-                            {c.group_name || 'Chi phí vận hành'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 font-mono font-bold text-slate-900">{c.code}</td>
-                        <td className="py-3 px-4 font-bold text-slate-900">{c.name}</td>
-                        <td className="py-3 px-4">
-                          <span className="px-2 py-0.5 rounded font-bold text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200">
-                            {c.category_type}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-slate-600 max-w-xs">{c.description || '---'}</td>
-                        <td className="py-3 px-4 text-center">
-                          {c.is_active ? (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                              Hoạt động
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-300">
-                              Tạm ngừng
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              onClick={() => handleOpenEditExpenseCat(c)}
-                              className="p-1.5 text-blue-600 hover:text-blue-800 rounded transition cursor-pointer"
-                              title="Sửa danh mục chi phí"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteExpenseCat(c.expense_category_id, c.name)}
-                              className="p-1.5 text-red-600 hover:text-red-800 rounded transition cursor-pointer"
-                              title="Xóa danh mục chi phí"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {filteredExpenseCategories.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-10 text-center text-slate-400">
+                          Không có danh mục chi phí nào phù hợp với bộ lọc tìm kiếm.
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      filteredExpenseCategories.map((c, idx) => (
+                        <tr key={c.expense_category_id} className="hover:bg-slate-50 transition">
+                          <td className="py-3 px-4 text-center text-slate-400 font-medium">{idx + 1}</td>
+                          <td className="py-3 px-4">
+                            <span className="font-mono font-bold text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200 block w-max mb-0.5">
+                              {c.group_code || 'CPVH'}
+                            </span>
+                            <span className="text-[11px] font-semibold text-slate-600 block line-clamp-1" title={c.group_name}>
+                              {c.group_name || 'Chi phí vận hành'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-mono font-bold text-slate-900">{c.code}</td>
+                          <td className="py-3 px-4 font-bold text-slate-900">{c.name}</td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-0.5 rounded font-bold text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              {c.category_type}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-slate-600 max-w-xs">{c.description || '---'}</td>
+                          <td className="py-3 px-4 text-center">
+                            {c.is_active ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                Hoạt động
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-300">
+                                Tạm ngừng
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => handleOpenEditExpenseCat(c)}
+                                className="p-1.5 text-blue-600 hover:text-blue-800 rounded transition cursor-pointer"
+                                title="Sửa danh mục chi phí"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteExpenseCat(c.expense_category_id, c.name)}
+                                className="p-1.5 text-red-600 hover:text-red-800 rounded transition cursor-pointer"
+                                title="Xóa danh mục chi phí"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -2633,13 +2908,13 @@ export const SqlServerAdminView: React.FC = () => {
                     required
                     value={expenseCatForm.category_type}
                     onChange={(e) => setExpenseCatForm({ ...expenseCatForm, category_type: e.target.value })}
-                    placeholder="Ví dụ: V. CHI PHÍ VẬN HÀNH & CÔNG TÁC, VI. CHI PHÍ GIAO TẾ & PHÚC LỢI..."
+                    placeholder="Ví dụ: 1. CHI PHÍ VẬN HÀNH & CÔNG TÁC, 2. CHI PHÍ GIAO TẾ & PHÚC LỢI..."
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 focus:outline-emerald-600 font-medium"
                   />
                   <div className="flex flex-wrap gap-1">
                     {[
-                      'V. CHI PHÍ VẬN HÀNH & CÔNG TÁC',
-                      'VI. CHI PHÍ GIAO TẾ & PHÚC LỢI',
+                      '1. CHI PHÍ VẬN HÀNH & CÔNG TÁC',
+                      '2. CHI PHÍ GIAO TẾ & PHÚC LỢI',
                       'Dịch vụ CNTT & Phần mềm',
                       'Bảo dưỡng & Sửa chữa',
                       'Hậu cần & Kho bãi'

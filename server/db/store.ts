@@ -82,21 +82,51 @@ class DatabaseStore {
       if (fs.existsSync(DB_FILE)) {
         const raw = fs.readFileSync(DB_FILE, 'utf-8');
         const st = JSON.parse(raw);
+        let updated = false;
         if (!st.suppliers) {
           st.suppliers = JSON.parse(JSON.stringify(INITIAL_SUPPLIERS));
+          updated = true;
         }
-        if (!st.expenseCategories || st.expenseCategories.length < 20) {
+        if (
+          !st.expenseCategories ||
+          st.expenseCategories.length < 40 ||
+          !st.expenseCategories.some((c: any) => c.group_code === 'CPPL-KH') ||
+          st.expenseCategories.some((c: any) => c.category_type?.startsWith('V.') || c.category_type?.startsWith('VI.'))
+        ) {
           st.expenseCategories = JSON.parse(JSON.stringify(INITIAL_EXPENSE_CATEGORIES));
+          updated = true;
         }
-        if (!st.serviceExpenses || st.serviceExpenses.length === 0) {
+        if (
+          !st.serviceExpenses ||
+          st.serviceExpenses.length < 4 ||
+          !st.serviceExpenses.some((e: any) => e.group_code?.startsWith('CPPL')) ||
+          st.serviceExpenses.some((e: any) => e.category_type?.startsWith('V.') || e.category_type?.startsWith('VI.'))
+        ) {
           st.serviceExpenses = JSON.parse(JSON.stringify(INITIAL_SERVICE_EXPENSES));
+          updated = true;
+        }
+        if (updated) {
+          try {
+            fs.writeFileSync(DB_FILE, JSON.stringify(st, null, 2), 'utf-8');
+          } catch (err) {
+            console.warn('[DB] Could not write upgraded seed data to db.json:', err);
+          }
         }
         return st;
       }
     } catch {
       console.warn('[DB] Could not load persisted db.json, using initial seed data');
     }
-    return getDefaultState();
+    const def = getDefaultState();
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+      fs.writeFileSync(DB_FILE, JSON.stringify(def, null, 2), 'utf-8');
+    } catch {
+      // ignore write error on init
+    }
+    return def;
   }
 
   public save(): void {
