@@ -161,7 +161,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'REPORTS',
       label: 'Báo Cáo & Xuất Excel',
-      sub: 'UI11 R01-R11 & Chi phí',
+      sub: 'Chi phí Nhóm DM, NCC, Thiết bị, Đơn vị',
       icon: BarChart3,
       allowedRoles: ['THU_KHO', 'THU_MUA', 'KY_THUAT', 'QUAN_TRI', 'QUAN_LY'],
     },

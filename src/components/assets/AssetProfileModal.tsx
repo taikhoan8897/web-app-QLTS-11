@@ -166,15 +166,35 @@ export const AssetProfileModal: React.FC<AssetProfileModalProps> = ({
 
             {/* Middle specs */}
             <div className="md:col-span-2 space-y-3">
-              <div>
-                <h4 className="text-base font-bold text-slate-900">{category?.name || 'Tài sản'}</h4>
-                <p className="text-xs text-slate-500">
-                  Nhóm: <span className="font-semibold text-slate-700">{category?.group}</span> • Loại theo dõi:{' '}
-                  <span className="font-semibold text-emerald-700">Định danh vật lý (Serialized)</span>
-                </p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-base font-bold text-slate-900">{category?.name || 'Tài sản'}</h4>
+                    {asset.brand && (
+                      <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 border border-indigo-200 font-bold text-xs">
+                        Hãng: {asset.brand}
+                      </span>
+                    )}
+                  </div>
+                  {asset.model_name && (
+                    <p className="text-xs font-bold text-emerald-800 mt-0.5">
+                      Dòng máy / Model: {asset.model_name}
+                    </p>
+                  )}
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Nhóm: <span className="font-semibold text-slate-700">{category?.group}</span> • Loại theo dõi:{' '}
+                    <span className="font-semibold text-emerald-700">Định danh vật lý (Serialized)</span>
+                  </p>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-xs pt-1">
+                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100">
+                  <span className="text-slate-500 block text-[11px]">Hãng & Dòng máy (Model)</span>
+                  <span className="font-bold text-indigo-900">
+                    {asset.brand ? `${asset.brand}${asset.model_name ? ` - ${asset.model_name}` : ''}` : 'Chưa cập nhật'}
+                  </span>
+                </div>
                 <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100">
                   <span className="text-slate-500 block text-[11px]">Số Serial nhà sản xuất</span>
                   <span className="font-mono font-bold text-slate-900">{asset.serial_no || 'Chưa cập nhật'}</span>
@@ -202,7 +222,7 @@ export const AssetProfileModal: React.FC<AssetProfileModalProps> = ({
                     </span>
                   )}
                 </div>
-                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100">
+                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 col-span-2">
                   <span className="text-slate-500 block text-[11px]">Thời hạn bảo hành</span>
                   <span className="font-medium text-slate-800">
                     {asset.warranty_to ? formatDateVN(asset.warranty_to).slice(0, 10) : 'Không có'}
@@ -211,9 +231,9 @@ export const AssetProfileModal: React.FC<AssetProfileModalProps> = ({
               </div>
 
               {asset.specifications && (
-                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-xs">
-                  <span className="text-slate-500 block text-[11px] mb-0.5">Thông số kỹ thuật / Cấu hình:</span>
-                  <p className="text-slate-700">{asset.specifications}</p>
+                <div className="p-2.5 bg-indigo-50/60 rounded-lg border border-indigo-100 text-xs">
+                  <span className="text-indigo-800 font-bold block text-[11px] mb-0.5">Thông số kỹ thuật / Cấu hình chi tiết:</span>
+                  <p className="text-slate-800 font-medium">{asset.specifications}</p>
                 </div>
               )}
 

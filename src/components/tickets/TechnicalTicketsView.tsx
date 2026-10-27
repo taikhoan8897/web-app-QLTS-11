@@ -13,7 +13,8 @@ import {
   Download,
   Send,
   Eye,
-  UserCheck
+  UserCheck,
+  Edit3
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { SupportTicket, Asset, Category } from '../../types';
@@ -35,6 +36,7 @@ export const TechnicalTicketsView: React.FC<TechnicalTicketsViewProps> = ({
     categories, 
     employees, 
     createTicket, 
+    updateTicket,
     assignTicket, 
     completeTicketScenario,
     proposeTicketScenario,
@@ -42,6 +44,7 @@ export const TechnicalTicketsView: React.FC<TechnicalTicketsViewProps> = ({
   } = useApp();
 
   const [isNewTicketOpen, setIsNewTicketOpen] = useState(false);
+  const [editingTicket, setEditingTicket] = useState<SupportTicket | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [activeScenarioModal, setActiveScenarioModal] = useState<
     'SUA_TAI_CHO' | 'SUA_CHUA_THAY_THE' | 'THU_HOI_CAP_MOI' | null
@@ -54,12 +57,13 @@ export const TechnicalTicketsView: React.FC<TechnicalTicketsViewProps> = ({
 
   const isTechnician = currentUser.role === 'KY_THUAT' || currentUser.role === 'QUAN_TRI';
 
-  // New Ticket Form State
+  // New / Edit Ticket Form State
   const [newIssueType, setNewIssueType] = useState<SupportTicket['issue_type']>('SU_CO_PHAN_CUNG');
   const [newDesc, setNewDesc] = useState('');
   const [newPriority, setNewPriority] = useState<SupportTicket['priority']>('CAO');
   const [newAssetId, setNewAssetId] = useState<string>('');
   const [newAttachmentName, setNewAttachmentName] = useState('');
+  const [newAssignedTo, setNewAssignedTo] = useState<string>('');
 
   // Scenario 1: Sửa tại chỗ
   const [fixDiagnosis, setFixDiagnosis] = useState('');
@@ -73,14 +77,59 @@ export const TechnicalTicketsView: React.FC<TechnicalTicketsViewProps> = ({
   >([{ category_id: 'CAT-08', qty: 1, action_type: 'THAY_THE', note: '' }]);
   const [advSignedFile, setAdvSignedFile] = useState('');
 
-  // CBNV assets held
+  // CBNV assets held (or all assets if editing a ticket for another reporter / technician)
+  const targetReporterId = editingTicket ? editingTicket.reporter_id : currentUser.employee_id;
   const userHeldAssets = assets.filter(
-    (a) => a.holder_employee_id === currentUser.employee_id
+    (a) =>
+      a.holder_employee_id === targetReporterId ||
+      (editingTicket && a.asset_id === editingTicket.asset_id) ||
+      isTechnician
   );
 
-  // Submit Create Ticket (Section 5.3.2)
+  // Open New Ticket Modal
+  const handleOpenNewTicket = () => {
+    setEditingTicket(null);
+    setNewIssueType('SU_CO_PHAN_CUNG');
+    setNewDesc('');
+    setNewPriority('CAO');
+    setNewAssetId('');
+    setNewAttachmentName('');
+    setNewAssignedTo('EMP-003');
+    setIsNewTicketOpen(true);
+  };
+
+  // Open Edit Ticket Modal
+  const handleOpenEditTicket = (ticket: SupportTicket) => {
+    setEditingTicket(ticket);
+    setNewIssueType(ticket.issue_type);
+    setNewDesc(ticket.description || '');
+    setNewPriority(ticket.priority || 'CAO');
+    setNewAssetId(ticket.asset_id || '');
+    setNewAttachmentName(ticket.attachment_file?.file_name || '');
+    setNewAssignedTo(ticket.assigned_to || 'EMP-003');
+    setIsNewTicketOpen(true);
+  };
+
+  // Submit Create or Edit Ticket (Section 5.3.2)
   const handleCreateTicket = (e: React.FormEvent) => {
     e.preventDefault();
+    if (editingTicket) {
+      const res = updateTicket(editingTicket.ticket_id, {
+        issue_type: newIssueType,
+        description: newDesc,
+        priority: newPriority,
+        asset_id: newAssetId || null,
+        attachment_name: newAttachmentName || '',
+        assigned_to: (isTechnician && newAssignedTo ? newAssignedTo : editingTicket.assigned_to) || undefined,
+      });
+      if (res.success) {
+        alert(res.message);
+        setIsNewTicketOpen(false);
+        setEditingTicket(null);
+      }
+      return;
+    }
+
     const res = createTicket({
       issue_type: newIssueType,
       description: newDesc,
@@ -232,7 +281,7 @@ export const TechnicalTicketsView: React.FC<TechnicalTicketsViewProps> = ({
         </div>
 
         <button
-          onClick={() => setIsNewTicketOpen(true)}
+          onClick={handleOpenNewTicket}
           className="flex items-center gap-1.5 px-4 py-2 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
         >
           <Plus className="w-4 h-4" />
@@ -253,7 +302,7 @@ export const TechnicalTicketsView: React.FC<TechnicalTicketsViewProps> = ({
                 <th className="py-3 px-4">Kỹ thuật viên phụ trách</th>
                 <th className="py-3 px-4">Phương án / Kết quả</th>
                 <th className="py-3 px-4">Trạng thái</th>
-                <th className="py-3 px-4 text-center">Xử lý kỹ thuật (3 Kịch bản)</th>
+                <th className="py-3 px-4 text-center">Thao tác & Xử lý kỹ thuật</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -331,89 +380,100 @@ export const TechnicalTicketsView: React.FC<TechnicalTicketsViewProps> = ({
                       </td>
                       <td className="py-3 px-4">{getStatusBadge(tck.status)}</td>
 
-                      {/* ACTIONS: Strictly role-gated. Normal CBNV CANNOT see technician action buttons! */}
+                      {/* ACTIONS: Sửa ticket + Xử lý kỹ thuật */}
                       <td className="py-3 px-4 text-center">
-                        {isTechnician ? (
-                          tck.status === 'HOAN_THANH' ? (
-                            <span className="text-emerald-700 font-bold text-[11px] flex items-center justify-center gap-1">
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              Đã đóng ticket
-                            </span>
-                          ) : tck.status === 'CHO_HO_SO' ? (
-                            <div className="inline-flex items-center gap-1">
-                              <span className="px-2 py-1 bg-purple-50 text-purple-800 border border-purple-200 rounded font-semibold text-[10px] flex items-center gap-1">
-                                <Clock className="w-3 h-3 text-purple-600" />
-                                Đã đề xuất (Chờ CBNV trình ký)
-                              </span>
-                              <button
-                                onClick={() => handleOpenCBNVApprovalModal(tck)}
-                                className="px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded font-bold text-[10px] transition cursor-pointer"
-                                title="Duyệt thay CBNV (Hỗ trợ kiểm thử)"
-                              >
-                                Duyệt thay
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="inline-flex flex-wrap items-center justify-center gap-1">
-                              {/* Kịch bản 1: Sửa tại chỗ */}
-                              <button
-                                onClick={() => handleOpenProcessModal(tck, 'SUA_TAI_CHO')}
-                                className="px-2 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded font-bold text-[10px] transition cursor-pointer"
-                                title="Kịch bản 1: Khắc phục tại chỗ"
-                              >
-                                Sửa tại chỗ
-                              </button>
+                        <div className="inline-flex flex-wrap items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleOpenEditTicket(tck)}
+                            className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded font-bold text-[10px] transition cursor-pointer flex items-center gap-1 shadow-xs"
+                            title="Chỉnh sửa thông tin ticket sự cố đã tạo"
+                          >
+                            <Edit3 className="w-3 h-3 text-amber-700" />
+                            Sửa
+                          </button>
 
-                              {/* Kịch bản 2: Sửa chữa thay thế */}
-                              <button
-                                onClick={() => handleOpenProcessModal(tck, 'SUA_CHUA_THAY_THE')}
-                                className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded font-bold text-[10px] transition cursor-pointer"
-                                title="Kịch bản 2: Đề xuất sửa chữa / thay thế linh kiện"
-                              >
-                                Thay thế
-                              </button>
-
-                              {/* Kịch bản 3: Thu hồi cấp mới */}
-                              <button
-                                onClick={() => handleOpenProcessModal(tck, 'THU_HOI_CAP_MOI')}
-                                className="px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded font-bold text-[10px] transition cursor-pointer"
-                                title="Kịch bản 3: Đề xuất thu hồi để cấp mới"
-                              >
-                                Thu hồi cấp mới
-                              </button>
-                            </div>
-                          )
-                        ) : (
-                          /* Normal CBNV user view */
-                          <div className="inline-flex items-center justify-center gap-1 text-[11px]">
-                            {tck.status === 'MOI' && (
-                              <span className="px-2 py-0.5 rounded text-amber-700 bg-amber-50 font-medium border border-amber-200">
-                                Đang chờ KTV tiếp nhận
-                              </span>
-                            )}
-                            {(tck.status === 'DA_TIEP_NHAN' || tck.status === 'DANG_XU_LY') && (
-                              <span className="px-2 py-0.5 rounded text-blue-700 bg-blue-50 font-medium border border-blue-200">
-                                KTV đang kiểm tra xử lý
-                              </span>
-                            )}
-                            {tck.status === 'CHO_HO_SO' && (
-                              <button
-                                onClick={() => handleOpenCBNVApprovalModal(tck)}
-                                className="px-2.5 py-1.5 bg-purple-700 hover:bg-purple-600 text-white rounded-lg font-bold text-[11px] shadow-xs flex items-center gap-1.5 transition cursor-pointer"
-                                title="Đính kèm file PDF đã ký duyệt & tự động sinh yêu cầu cấp phát sang kho"
-                              >
-                                <FileCheck className="w-3.5 h-3.5 text-purple-200" />
-                                <span>Trình ký & Phê duyệt phương án</span>
-                              </button>
-                            )}
-                            {tck.status === 'HOAN_THANH' && (
-                              <span className="px-2 py-0.5 rounded text-emerald-700 bg-emerald-50 font-semibold border border-emerald-200 flex items-center gap-1">
+                          {isTechnician ? (
+                            tck.status === 'HOAN_THANH' ? (
+                              <span className="text-emerald-700 font-bold text-[11px] flex items-center justify-center gap-1">
                                 <CheckCircle2 className="w-3.5 h-3.5" />
-                                Đã hoàn thành
+                                Đã đóng ticket
                               </span>
-                            )}
-                          </div>
-                        )}
+                            ) : tck.status === 'CHO_HO_SO' ? (
+                              <div className="inline-flex items-center gap-1">
+                                <span className="px-2 py-1 bg-purple-50 text-purple-800 border border-purple-200 rounded font-semibold text-[10px] flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-purple-600" />
+                                  Đã đề xuất (Chờ CBNV trình ký)
+                                </span>
+                                <button
+                                  onClick={() => handleOpenCBNVApprovalModal(tck)}
+                                  className="px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded font-bold text-[10px] transition cursor-pointer"
+                                  title="Duyệt thay CBNV (Hỗ trợ kiểm thử)"
+                                >
+                                  Duyệt thay
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                {/* Kịch bản 1: Sửa tại chỗ */}
+                                <button
+                                  onClick={() => handleOpenProcessModal(tck, 'SUA_TAI_CHO')}
+                                  className="px-2 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded font-bold text-[10px] transition cursor-pointer"
+                                  title="Kịch bản 1: Khắc phục tại chỗ"
+                                >
+                                  Sửa tại chỗ
+                                </button>
+
+                                {/* Kịch bản 2: Sửa chữa thay thế */}
+                                <button
+                                  onClick={() => handleOpenProcessModal(tck, 'SUA_CHUA_THAY_THE')}
+                                  className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded font-bold text-[10px] transition cursor-pointer"
+                                  title="Kịch bản 2: Đề xuất sửa chữa / thay thế linh kiện"
+                                >
+                                  Thay thế
+                                </button>
+
+                                {/* Kịch bản 3: Thu hồi cấp mới */}
+                                <button
+                                  onClick={() => handleOpenProcessModal(tck, 'THU_HOI_CAP_MOI')}
+                                  className="px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded font-bold text-[10px] transition cursor-pointer"
+                                  title="Kịch bản 3: Đề xuất thu hồi để cấp mới"
+                                >
+                                  Thu hồi cấp mới
+                                </button>
+                              </>
+                            )
+                          ) : (
+                            /* Normal CBNV user view */
+                            <>
+                              {tck.status === 'MOI' && (
+                                <span className="px-2 py-0.5 rounded text-amber-700 bg-amber-50 font-medium border border-amber-200 text-[11px]">
+                                  Đang chờ KTV tiếp nhận
+                                </span>
+                              )}
+                              {(tck.status === 'DA_TIEP_NHAN' || tck.status === 'DANG_XU_LY') && (
+                                <span className="px-2 py-0.5 rounded text-blue-700 bg-blue-50 font-medium border border-blue-200 text-[11px]">
+                                  KTV đang kiểm tra xử lý
+                                </span>
+                              )}
+                              {tck.status === 'CHO_HO_SO' && (
+                                <button
+                                  onClick={() => handleOpenCBNVApprovalModal(tck)}
+                                  className="px-2.5 py-1.5 bg-purple-700 hover:bg-purple-600 text-white rounded-lg font-bold text-[11px] shadow-xs flex items-center gap-1.5 transition cursor-pointer"
+                                  title="Đính kèm file PDF đã ký duyệt & tự động sinh yêu cầu cấp phát sang kho"
+                                >
+                                  <FileCheck className="w-3.5 h-3.5 text-purple-200" />
+                                  <span>Trình ký & Phê duyệt phương án</span>
+                                </button>
+                              )}
+                              {tck.status === 'HOAN_THANH' && (
+                                <span className="px-2 py-0.5 rounded text-emerald-700 bg-emerald-50 font-semibold border border-emerald-200 flex items-center gap-1 text-[11px]">
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  Đã hoàn thành
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -424,18 +484,35 @@ export const TechnicalTicketsView: React.FC<TechnicalTicketsViewProps> = ({
         </div>
       </div>
 
-      {/* --- MODAL 1: TẠO TICKET SỰ CỐ MỚI (CBNV) --- */}
+      {/* --- MODAL 1: TẠO HOẶC CHỈNH SỬA TICKET SỰ CỐ (CBNV / KTV) --- */}
       {isNewTicketOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
             <div className="px-6 py-4 bg-purple-900 text-white flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-base">Báo Cáo Sự Cố Kỹ Thuật IT / Bảo Trì (UI08)</h3>
+                <h3 className="font-bold text-base flex items-center gap-2">
+                  {editingTicket ? (
+                    <>
+                      <Edit3 className="w-4 h-4 text-amber-300" />
+                      Chỉnh Sửa Ticket Sự Cố [{editingTicket.ticket_code}]
+                    </>
+                  ) : (
+                    'Báo Cáo Sự Cố Kỹ Thuật IT / Bảo Trì (UI08)'
+                  )}
+                </h3>
                 <p className="text-xs text-purple-200">
-                  Người báo: {currentUser.full_name} ({currentUser.employee_code})
+                  {editingTicket
+                    ? `Người báo: ${employees.find((e) => e.employee_id === editingTicket.reporter_id)?.full_name || editingTicket.reporter_id}`
+                    : `Người báo: ${currentUser.full_name} (${currentUser.employee_code})`}
                 </p>
               </div>
-              <button onClick={() => setIsNewTicketOpen(false)} className="text-purple-200 hover:text-white">
+              <button
+                onClick={() => {
+                  setIsNewTicketOpen(false);
+                  setEditingTicket(null);
+                }}
+                className="text-purple-200 hover:text-white cursor-pointer"
+              >
                 ✕
               </button>
             </div>
@@ -470,23 +547,45 @@ export const TechnicalTicketsView: React.FC<TechnicalTicketsViewProps> = ({
                     <option key={ast.asset_id} value={ast.asset_id}>
                       {ast.asset_code} (SN: {ast.serial_no}) -{' '}
                       {categories.find((c) => c.category_id === ast.category_id)?.name}
+                      {ast.brand ? ` [${ast.brand}${ast.model_name ? ` ${ast.model_name}` : ''}]` : ''}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Mức độ ưu tiên:</label>
-                <select
-                  value={newPriority}
-                  onChange={(e) => setNewPriority(e.target.value as any)}
-                  className="w-full bg-white border border-slate-200 rounded-lg p-2 focus:outline-emerald-600"
-                >
-                  <option value="CAO">Ưu tiên cao (Ảnh hưởng trực tiếp tiến độ công việc)</option>
-                  <option value="KHAN_CAP">Khẩn cấp (Hỏng hệ thống hoặc thiết bị trọng yếu)</option>
-                  <option value="TRUNG_BINH">Bình thường</option>
-                  <option value="THAP">Thấp</option>
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Mức độ ưu tiên:</label>
+                  <select
+                    value={newPriority}
+                    onChange={(e) => setNewPriority(e.target.value as any)}
+                    className="w-full bg-white border border-slate-200 rounded-lg p-2 focus:outline-emerald-600"
+                  >
+                    <option value="CAO">Ưu tiên cao</option>
+                    <option value="KHAN_CAP">Khẩn cấp</option>
+                    <option value="TRUNG_BINH">Bình thường</option>
+                    <option value="THAP">Thấp</option>
+                  </select>
+                </div>
+
+                {editingTicket && isTechnician && (
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Kỹ thuật viên phụ trách:</label>
+                    <select
+                      value={newAssignedTo}
+                      onChange={(e) => setNewAssignedTo(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-2 focus:outline-emerald-600"
+                    >
+                      {employees
+                        .filter((e) => e.role === 'KY_THUAT' || e.role === 'QUAN_TRI')
+                        .map((emp) => (
+                          <option key={emp.employee_id} value={emp.employee_id}>
+                            {emp.full_name} ({emp.role})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -514,7 +613,7 @@ export const TechnicalTicketsView: React.FC<TechnicalTicketsViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setNewAttachmentName(`Screenshot_Error_${Date.now().toString().slice(-4)}.png`)}
-                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg"
+                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg cursor-pointer"
                   >
                     Mẫu ảnh
                   </button>
@@ -524,16 +623,19 @@ export const TechnicalTicketsView: React.FC<TechnicalTicketsViewProps> = ({
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsNewTicketOpen(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg"
+                  onClick={() => {
+                    setIsNewTicketOpen(false);
+                    setEditingTicket(null);
+                  }}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg cursor-pointer"
                 >
                   Hủy bỏ
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-purple-800 hover:bg-purple-700 text-white font-bold rounded-lg shadow-xs"
+                  className="px-5 py-2 bg-purple-800 hover:bg-purple-700 text-white font-bold rounded-lg shadow-xs cursor-pointer"
                 >
-                  Gửi ticket cho Kỹ thuật
+                  {editingTicket ? 'Lưu cập nhật Ticket' : 'Gửi ticket cho Kỹ thuật'}
                 </button>
               </div>
             </form>

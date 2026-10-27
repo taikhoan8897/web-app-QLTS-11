@@ -74,6 +74,10 @@ export const PurchaseOrdersView: React.FC = () => {
   const [singlePOSupplier, setSinglePOSupplier] = useState('');
   const [singlePOWarehouseId, setSinglePOWarehouseId] = useState(selectedWarehouseId);
   const [singlePONote, setSinglePONote] = useState('');
+  const [singlePOBrand, setSinglePOBrand] = useState('');
+  const [singlePOModel, setSinglePOModel] = useState('');
+  const [singlePOSpecs, setSinglePOSpecs] = useState('');
+  const [singlePOPrice, setSinglePOPrice] = useState(0);
 
   // Manual PO Modal state (Tạo PO riêng mới thủ công từ danh sách PO)
   const [isCreateManualPOOpen, setIsCreateManualPOOpen] = useState(false);
@@ -81,8 +85,24 @@ export const PurchaseOrdersView: React.FC = () => {
   const [manualPOSupplier, setManualPOSupplier] = useState('Công ty CP Công Nghệ Phong Vũ');
   const [manualPOTrackingType, setManualPOTrackingType] = useState<TrackingType>('DINH_DANH');
   const [manualPONote, setManualPONote] = useState('');
-  const [manualPOLines, setManualPOLines] = useState<{ category_id: string; qty: number; unit_price: number }[]>([
-    { category_id: 'CAT-01', qty: 1, unit_price: 25000000 },
+  const [manualPOLines, setManualPOLines] = useState<
+    {
+      category_id: string;
+      brand?: string;
+      model_name?: string;
+      specifications?: string;
+      qty: number;
+      unit_price: number;
+    }[]
+  >([
+    {
+      category_id: 'CAT-01',
+      brand: 'Dell',
+      model_name: 'Dell Latitude 5430',
+      specifications: 'Core i5-1235U, RAM 16GB DDR4, SSD 512GB NVMe, 14" FHD IPS',
+      qty: 1,
+      unit_price: 21500000,
+    },
   ]);
 
   // Consolidation Modal options
@@ -90,11 +110,21 @@ export const PurchaseOrdersView: React.FC = () => {
   const [consolidateSupplier, setConsolidateSupplier] = useState('Công ty CP Công Nghệ Phong Vũ');
   const [consolidateNote, setConsolidateNote] = useState('');
   const [mergeSameCategory, setMergeSameCategory] = useState(false);
+  const [consolidateLineConfigs, setConsolidateLineConfigs] = useState<
+    Record<string, { brand?: string; model_name?: string; specifications?: string; estimated_unit_price?: number }>
+  >({});
 
   // Procure PO modal states
   const [procureSupplier, setProcureSupplier] = useState('');
   const [procureLines, setProcureLines] = useState<
-    { line_id: string; actual_unit_price: number; qty_received: number }[]
+    {
+      line_id: string;
+      actual_unit_price: number;
+      qty_received: number;
+      brand?: string;
+      model_name?: string;
+      specifications?: string;
+    }[]
   >([]);
   const [isPartialDelivery, setIsPartialDelivery] = useState(false);
 
@@ -161,6 +191,20 @@ export const PurchaseOrdersView: React.FC = () => {
     }
     const demandsToGom = procurementDemands.filter((d) => selectedDemandIds.includes(d.demand_id));
     const uniqueCodes = Array.from(new Set(demandsToGom.map((d) => d.source_code)));
+    const initConfigs: Record<string, { brand?: string; model_name?: string; specifications?: string; estimated_unit_price?: number }> = {};
+    demandsToGom.forEach((d) => {
+      const cat = categories.find((c) => c.category_id === d.category_id);
+      if (cat?.tracking_type === 'DINH_DANH') {
+        const firstCfg = cat.brand_configs?.[0];
+        initConfigs[d.demand_id] = {
+          brand: firstCfg?.brand || cat.supported_brands?.[0] || 'Dell',
+          model_name: firstCfg?.model_name || '',
+          specifications: firstCfg?.specifications || '',
+          estimated_unit_price: firstCfg?.estimated_price || d.estimated_unit_price || cat.estimated_unit_price || 20000000,
+        };
+      }
+    });
+    setConsolidateLineConfigs(initConfigs);
     setConsolidateNote(`Gom mua sắm từ ${demandsToGom.length} mặt hàng của các nguồn: ${uniqueCodes.join(', ')}`);
     setIsConsolidateModalOpen(true);
   };
@@ -175,6 +219,7 @@ export const PurchaseOrdersView: React.FC = () => {
       supplier_name: consolidateSupplier,
       note: consolidateNote,
       merge_same_category: mergeSameCategory,
+      lineConfigs: consolidateLineConfigs,
     });
 
     if (res.success) {
@@ -199,6 +244,11 @@ export const PurchaseOrdersView: React.FC = () => {
     setTargetSingleDemand(dem);
     const cat = categories.find((c) => c.category_id === dem.category_id);
     const isDD = cat?.tracking_type === 'DINH_DANH';
+    const firstCfg = cat?.brand_configs?.[0];
+    setSinglePOBrand(isDD ? (firstCfg?.brand || cat?.supported_brands?.[0] || 'Dell') : '');
+    setSinglePOModel(isDD ? (firstCfg?.model_name || '') : '');
+    setSinglePOSpecs(isDD ? (firstCfg?.specifications || '') : '');
+    setSinglePOPrice(firstCfg?.estimated_price || dem.estimated_unit_price || cat?.estimated_unit_price || 0);
     setSinglePOSupplier(isDD ? 'Công ty CP Công Nghệ Phong Vũ' : 'Công ty TNHH Văn Phòng Phẩm An Phát');
     setSinglePOWarehouseId(selectedWarehouseId);
     setSinglePONote(`PO riêng lẻ cho ${cat?.name || 'mặt hàng'} theo nhu cầu ${dem.source_code} (${dem.requester_name})`);
@@ -213,6 +263,10 @@ export const PurchaseOrdersView: React.FC = () => {
       receiving_warehouse_id: singlePOWarehouseId,
       supplier_name: singlePOSupplier,
       note: singlePONote,
+      brand: singlePOBrand || undefined,
+      model_name: singlePOModel || undefined,
+      specifications: singlePOSpecs || undefined,
+      estimated_unit_price: singlePOPrice || undefined,
     });
     alert(res.message);
     if (res.success) {
@@ -263,6 +317,9 @@ export const PurchaseOrdersView: React.FC = () => {
       note: manualPONote || 'PO lập riêng biệt thủ công bởi bộ phận Thu mua',
       lines: manualPOLines.map((l) => ({
         category_id: l.category_id,
+        brand: manualPOTrackingType === 'DINH_DANH' ? l.brand : undefined,
+        model_name: manualPOTrackingType === 'DINH_DANH' ? l.model_name : undefined,
+        specifications: manualPOTrackingType === 'DINH_DANH' ? l.specifications : undefined,
         qty_requested: l.qty,
         estimated_unit_price: l.unit_price,
         source_type: 'MANUAL',
@@ -297,11 +354,18 @@ export const PurchaseOrdersView: React.FC = () => {
     setSelectedPO(po);
     setProcureSupplier(po.supplier_name || 'Công ty CP Công Nghệ Phong Vũ');
     setProcureLines(
-      po.lines.map((l) => ({
-        line_id: l.line_id,
-        actual_unit_price: l.actual_unit_price || l.estimated_unit_price || 20000000,
-        qty_received: l.qty_received > 0 ? l.qty_received : l.qty_ordered,
-      }))
+      po.lines.map((l) => {
+        const cat = categories.find((c) => c.category_id === l.category_id);
+        const firstCfg = cat?.brand_configs?.[0];
+        return {
+          line_id: l.line_id,
+          actual_unit_price: l.actual_unit_price || l.estimated_unit_price || firstCfg?.estimated_price || 20000000,
+          qty_received: l.qty_received > 0 ? l.qty_received : l.qty_ordered,
+          brand: l.brand || (l.tracking_type === 'DINH_DANH' ? (firstCfg?.brand || cat?.supported_brands?.[0] || 'Dell') : undefined),
+          model_name: l.model_name || (l.tracking_type === 'DINH_DANH' ? (firstCfg?.model_name || '') : undefined),
+          specifications: l.specifications || (l.tracking_type === 'DINH_DANH' ? (firstCfg?.specifications || '') : undefined),
+        };
+      })
     );
     setIsPartialDelivery(false);
     setIsProcuringModalOpen(true);
@@ -1467,17 +1531,20 @@ export const PurchaseOrdersView: React.FC = () => {
                 </div>
               )}
 
-              {/* PO Lines Table with Origin Tags */}
+              {/* PO Lines Table with Origin Tags & Brand/Specs */}
               <div>
                 <label className="block font-bold text-slate-800 mb-2">
-                  Chi tiết từng mặt hàng và nguồn gốc gom đơn:
+                  Chi tiết từng mặt hàng, Hãng sản xuất, Cấu hình và nguồn gốc gom đơn:
                 </label>
                 <div className="border border-slate-200 rounded-xl overflow-hidden">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
                       <tr>
                         <th className="p-2 w-8 text-center">STT</th>
-                        <th className="p-2">Mặt hàng</th>
+                        <th className="p-2">Tên hàng hóa</th>
+                        {selectedPO.tracking_type === 'DINH_DANH' && (
+                          <th className="p-2">Hãng & Cấu hình đặt mua</th>
+                        )}
                         <th className="p-2">Nguồn phát sinh ban đầu</th>
                         <th className="p-2 text-center">SL Đặt</th>
                         <th className="p-2 text-center">SL Đã giao</th>
@@ -1492,11 +1559,30 @@ export const PurchaseOrdersView: React.FC = () => {
                           <tr key={line.line_id} className="hover:bg-slate-50">
                             <td className="p-2 text-center text-slate-400">{idx + 1}</td>
                             <td className="p-2">
-                              <span className="font-semibold text-slate-900">{cat?.name}</span>
+                              <span className="font-bold text-slate-900">{cat?.name}</span>
                               <div className="text-[10px] text-slate-400">
-                                {line.tracking_type === 'DINH_DANH' ? '🏷️ Hàng Định Danh (Cần sinh Serial/QR)' : '📦 Hàng Tiêu Hao (Cộng tồn kho)'}
+                                {line.tracking_type === 'DINH_DANH' ? '🏷️ Hàng Định Danh (Serial/QR)' : '📦 Hàng Tiêu Hao (Cộng tồn kho)'}
                               </div>
                             </td>
+                            {selectedPO.tracking_type === 'DINH_DANH' && (
+                              <td className="p-2">
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-blue-100 text-blue-900 border border-blue-200">
+                                    Hãng: {line.brand || cat?.supported_brands?.[0] || 'Tiêu chuẩn'}
+                                  </span>
+                                  {line.model_name && (
+                                    <span className="font-bold text-slate-800 text-[11px]">
+                                      {line.model_name}
+                                    </span>
+                                  )}
+                                </div>
+                                {line.specifications && (
+                                  <div className="text-[11px] text-slate-600 mt-0.5">
+                                    {line.specifications}
+                                  </div>
+                                )}
+                              </td>
+                            )}
                             <td className="p-2">
                               {line.source_code ? (
                                 <span className="font-mono font-bold text-slate-800 block text-[11px]">
@@ -1618,26 +1704,123 @@ export const PurchaseOrdersView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Line item price/qty update */}
+              {/* Line item price/qty/brand/specs update */}
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Đơn giá thực tế & Số lượng giao nhận:
+                  Xác nhận Hãng sản xuất, Cấu hình, Đơn giá thực tế & Số lượng giao nhận:
                 </label>
                 <div className="space-y-3">
                   {selectedPO.lines.map((l, idx) => {
                     const cat = categories.find((c) => c.category_id === l.category_id);
                     const stateLine = procureLines.find((pl) => pl.line_id === l.line_id);
+                    const isDD = l.tracking_type === 'DINH_DANH';
+                    const brandOptions = cat?.supported_brands || ['Dell', 'HP', 'Lenovo', 'Asus', 'Apple', 'Canon', 'Brother', 'LG'];
+                    const brandConfigs = (cat?.brand_configs || []).filter(
+                      (cfg) => !stateLine?.brand || cfg.brand === stateLine.brand
+                    );
 
                     return (
-                      <div key={l.line_id} className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                      <div key={l.line_id} className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-slate-800">
-                            {idx + 1}. {cat?.name} ({l.tracking_type === 'DINH_DANH' ? 'Định danh' : 'Tiêu hao'})
+                          <span className="font-bold text-slate-900 text-xs">
+                            {idx + 1}. {cat?.name} ({isDD ? 'Tài sản Định danh' : 'Vật tư Tiêu hao'})
                           </span>
                           <span className="text-[11px] text-slate-500">
                             Số lượng đặt: <strong className="text-slate-800">{l.qty_ordered}</strong> {cat?.unit_of_measure}
                           </span>
                         </div>
+
+                        {isDD && (
+                          <div className="p-2.5 bg-blue-50/70 border border-blue-200 rounded-lg space-y-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                              <div>
+                                <label className="text-[11px] font-bold text-blue-900 block mb-0.5">
+                                  Chọn Hãng thu mua:
+                                </label>
+                                <select
+                                  value={stateLine?.brand || ''}
+                                  onChange={(e) => {
+                                    const newBrand = e.target.value;
+                                    const firstCfg = (cat?.brand_configs || []).find((c) => c.brand === newBrand);
+                                    setProcureLines((prev) =>
+                                      prev.map((pl) =>
+                                        pl.line_id === l.line_id
+                                          ? {
+                                              ...pl,
+                                              brand: newBrand,
+                                              model_name: firstCfg ? firstCfg.model_name : pl.model_name,
+                                              specifications: firstCfg ? firstCfg.specifications : pl.specifications,
+                                              actual_unit_price: firstCfg?.estimated_price || pl.actual_unit_price,
+                                            }
+                                          : pl
+                                      )
+                                    );
+                                  }}
+                                  className="w-full bg-white border border-blue-300 rounded-md p-1.5 font-bold text-blue-900 text-xs"
+                                >
+                                  {brandOptions.map((b) => (
+                                    <option key={b} value={b}>
+                                      Hãng {b}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div className="sm:col-span-2">
+                                <label className="text-[11px] font-bold text-blue-900 block mb-0.5">
+                                  Chọn Dòng máy & Cấu hình ({stateLine?.brand}):
+                                </label>
+                                <select
+                                  value={stateLine?.model_name || ''}
+                                  onChange={(e) => {
+                                    const chosenModel = e.target.value;
+                                    const foundCfg = (cat?.brand_configs || []).find((c) => c.model_name === chosenModel);
+                                    setProcureLines((prev) =>
+                                      prev.map((pl) =>
+                                        pl.line_id === l.line_id
+                                          ? {
+                                              ...pl,
+                                              model_name: chosenModel,
+                                              specifications: foundCfg ? foundCfg.specifications : pl.specifications,
+                                              actual_unit_price: foundCfg?.estimated_price || pl.actual_unit_price,
+                                            }
+                                          : pl
+                                      )
+                                    );
+                                  }}
+                                  className="w-full bg-white border border-blue-300 rounded-md p-1.5 font-semibold text-slate-800 text-xs"
+                                >
+                                  {brandConfigs.map((cfg) => (
+                                    <option key={cfg.model_name} value={cfg.model_name}>
+                                      {cfg.model_name} — ({cfg.specifications})
+                                    </option>
+                                  ))}
+                                  <option value={stateLine?.model_name || ''}>{stateLine?.model_name || 'Tùy chỉnh'}</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
+                                Thông số cấu hình chi tiết trên hóa đơn / PO:
+                              </label>
+                              <input
+                                type="text"
+                                value={stateLine?.specifications || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setProcureLines((prev) =>
+                                    prev.map((pl) =>
+                                      pl.line_id === l.line_id ? { ...pl, specifications: val } : pl
+                                    )
+                                  );
+                                }}
+                                placeholder="VD: Core i5-1235U, RAM 16GB, SSD 512GB NVMe..."
+                                className="w-full bg-white border border-slate-300 rounded-md p-1.5 text-xs font-medium"
+                              />
+                            </div>
+                          </div>
+                        )}
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
@@ -1735,7 +1918,7 @@ export const PurchaseOrdersView: React.FC = () => {
               <div>
                 <h3 className="font-bold text-base flex items-center gap-2">
                   <ShoppingCart className="w-5 h-5 text-blue-300" />
-                  Sinh Đơn Hàng PO Riêng Biệt (Không Gom Chung)
+                  Sinh Đơn Hàng PO Riêng Biệt (Chọn Hãng & Cấu Hình)
                 </h3>
                 <p className="text-xs text-blue-200">
                   Tạo đơn mua sắm độc lập cho mặt hàng từ nguồn {targetSingleDemand.source_code}
@@ -1750,34 +1933,110 @@ export const PurchaseOrdersView: React.FC = () => {
             </div>
 
             <form onSubmit={handleConfirmSinglePO} className="p-6 space-y-4 text-xs">
-              {/* Demand Info Box */}
+              {/* Demand Info Box + Brand/Config Selector for DINH_DANH */}
               {(() => {
                 const cat = categories.find((c) => c.category_id === targetSingleDemand.category_id);
                 const isDD = cat?.tracking_type === 'DINH_DANH';
-                const estTotal = targetSingleDemand.qty_needed * (targetSingleDemand.estimated_unit_price || 0);
+                const unitPrice = singlePOPrice || targetSingleDemand.estimated_unit_price || 0;
+                const estTotal = targetSingleDemand.qty_needed * unitPrice;
+                const brandList = cat?.supported_brands || ['Dell', 'HP', 'Lenovo', 'Asus', 'Apple', 'Canon', 'Brother', 'LG'];
+                const brandConfigs = (cat?.brand_configs || []).filter((c) => !singlePOBrand || c.brand === singlePOBrand);
 
                 return (
-                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-900 text-sm">{cat?.name}</span>
-                      {isDD ? (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-black bg-blue-100 text-blue-900 border border-blue-300 flex items-center gap-1">
-                          <QrCode className="w-3 h-3 text-blue-700" />
-                          Hàng Định Danh (Serial/QR)
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
-                          <Boxes className="w-3 h-3 text-amber-700" />
-                          Hàng Tiêu Hao (Số lượng)
-                        </span>
-                      )}
+                  <div className="space-y-3">
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-900 text-sm">{cat?.name}</span>
+                        {isDD ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-black bg-blue-100 text-blue-900 border border-blue-300 flex items-center gap-1">
+                            <QrCode className="w-3 h-3 text-blue-700" />
+                            Hàng Định Danh (Serial/QR)
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                            <Boxes className="w-3 h-3 text-amber-700" />
+                            Hàng Tiêu Hao (Số lượng)
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
+                        <div>Nguồn phát sinh: <strong className="text-slate-800 font-mono">{targetSingleDemand.source_code}</strong></div>
+                        <div>Người đề xuất: <strong className="text-slate-800">{targetSingleDemand.requester_name}</strong></div>
+                        <div>Số lượng cần mua: <strong className="text-emerald-800 font-mono text-sm">{targetSingleDemand.qty_needed}</strong> {cat?.unit_of_measure}</div>
+                        <div>Thành tiền dự kiến: <strong className="text-emerald-800 font-mono text-sm">{formatVND(estTotal)}</strong></div>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
-                      <div>Nguồn phát sinh: <strong className="text-slate-800 font-mono">{targetSingleDemand.source_code}</strong></div>
-                      <div>Người đề xuất: <strong className="text-slate-800">{targetSingleDemand.requester_name}</strong></div>
-                      <div>Số lượng cần mua: <strong className="text-emerald-800 font-mono text-sm">{targetSingleDemand.qty_needed}</strong> {cat?.unit_of_measure}</div>
-                      <div>Thành tiền dự kiến: <strong className="text-emerald-800 font-mono text-sm">{formatVND(estTotal)}</strong></div>
-                    </div>
+
+                    {isDD && (
+                      <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2.5">
+                        <div className="font-bold text-blue-950 text-xs">
+                          Chỉ định Hãng sản xuất & Cấu hình đặt mua cho {cat?.name}:
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {brandList.map((b) => (
+                            <button
+                              key={b}
+                              type="button"
+                              onClick={() => {
+                                setSinglePOBrand(b);
+                                const firstCfg = (cat?.brand_configs || []).find((c) => c.brand === b);
+                                if (firstCfg) {
+                                  setSinglePOModel(firstCfg.model_name);
+                                  setSinglePOSpecs(firstCfg.specifications);
+                                  if (firstCfg.estimated_price) setSinglePOPrice(firstCfg.estimated_price);
+                                }
+                              }}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                                singlePOBrand === b
+                                  ? 'bg-blue-700 text-white shadow-2xs'
+                                  : 'bg-white text-slate-700 border border-blue-200 hover:bg-blue-100'
+                              }`}
+                            >
+                              {b}
+                            </button>
+                          ))}
+                        </div>
+
+                        {brandConfigs.length > 0 && (
+                          <div>
+                            <label className="block text-[11px] font-semibold text-blue-900 mb-0.5">
+                              Chọn dòng máy & cấu hình chuẩn ({singlePOBrand}):
+                            </label>
+                            <select
+                              value={singlePOModel}
+                              onChange={(e) => {
+                                const m = e.target.value;
+                                setSinglePOModel(m);
+                                const found = brandConfigs.find((c) => c.model_name === m);
+                                if (found) {
+                                  setSinglePOSpecs(found.specifications);
+                                  if (found.estimated_price) setSinglePOPrice(found.estimated_price);
+                                }
+                              }}
+                              className="w-full bg-white border border-blue-300 rounded-lg p-2 font-semibold text-slate-800"
+                            >
+                              {brandConfigs.map((cfg) => (
+                                <option key={cfg.model_name} value={cfg.model_name}>
+                                  {cfg.model_name} — {cfg.specifications} ({formatVND(cfg.estimated_price || 0)})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
+                            Cấu hình chi tiết ghi trên PO:
+                          </label>
+                          <input
+                            type="text"
+                            value={singlePOSpecs}
+                            onChange={(e) => setSinglePOSpecs(e.target.value)}
+                            className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-medium"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })()}
@@ -1880,7 +2139,7 @@ export const PurchaseOrdersView: React.FC = () => {
               <div>
                 <h3 className="font-bold text-base flex items-center gap-2">
                   <Plus className="w-5 h-5 text-amber-300" />
-                  Lập Đơn Hàng PO Mới (Tạo Riêng Thủ Công)
+                  Lập Đơn Hàng PO Mới (Chọn Hãng & Cấu Hình Chi Tiết)
                 </h3>
                 <p className="text-xs text-emerald-200">
                   Dành cho bộ phận Thu mua chủ động tạo đơn PO riêng trực tiếp với nhà cung cấp
@@ -1906,8 +2165,18 @@ export const PurchaseOrdersView: React.FC = () => {
                     onClick={() => {
                       setManualPOTrackingType('DINH_DANH');
                       const firstDD = categories.find((c) => c.tracking_type === 'DINH_DANH');
+                      const firstCfg = firstDD?.brand_configs?.[0];
                       if (firstDD) {
-                        setManualPOLines([{ category_id: firstDD.category_id, qty: 1, unit_price: 25000000 }]);
+                        setManualPOLines([
+                          {
+                            category_id: firstDD.category_id,
+                            brand: firstCfg?.brand || firstDD.supported_brands?.[0] || 'Dell',
+                            model_name: firstCfg?.model_name || '',
+                            specifications: firstCfg?.specifications || '',
+                            qty: 1,
+                            unit_price: firstCfg?.estimated_price || firstDD.estimated_unit_price || 21500000,
+                          },
+                        ]);
                       }
                     }}
                     className={`p-3 rounded-xl border-2 text-left font-bold transition cursor-pointer ${
@@ -1921,7 +2190,7 @@ export const PurchaseOrdersView: React.FC = () => {
                       <span>PO Hàng Định Danh (Serial/QR)</span>
                     </div>
                     <span className="text-[11px] font-normal block text-slate-500">
-                      Tài sản cần cấp Serial, mã QR, biên bản bàn giao (Laptop, Máy in, Thiết bị...)
+                      Tài sản cần chọn Hãng, Cấu hình, cấp Serial, mã QR (Laptop, PC, Máy in...)
                     </span>
                   </button>
 
@@ -2012,19 +2281,23 @@ export const PurchaseOrdersView: React.FC = () => {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="font-bold text-slate-700">
-                    Danh sách mặt hàng ({manualPOTrackingType === 'DINH_DANH' ? 'Chỉ chọn Hàng Định Danh' : 'Chỉ chọn Hàng Tiêu Hao'}):
+                    Danh sách mặt hàng ({manualPOTrackingType === 'DINH_DANH' ? 'Chọn Tên hàng hóa → Hãng → Cấu hình' : 'Hàng Tiêu Hao'}):
                   </label>
                   <button
                     type="button"
                     onClick={() => {
                       const availCats = categories.filter((c) => c.tracking_type === manualPOTrackingType);
                       const pick = availCats[0] || categories[0];
+                      const firstCfg = pick.brand_configs?.[0];
                       setManualPOLines((prev) => [
                         ...prev,
                         {
                           category_id: pick.category_id,
+                          brand: manualPOTrackingType === 'DINH_DANH' ? (firstCfg?.brand || pick.supported_brands?.[0] || 'Dell') : undefined,
+                          model_name: manualPOTrackingType === 'DINH_DANH' ? (firstCfg?.model_name || '') : undefined,
+                          specifications: manualPOTrackingType === 'DINH_DANH' ? (firstCfg?.specifications || '') : undefined,
                           qty: manualPOTrackingType === 'DINH_DANH' ? 1 : 10,
-                          unit_price: manualPOTrackingType === 'DINH_DANH' ? 20000000 : 350000,
+                          unit_price: firstCfg?.estimated_price || pick.estimated_unit_price || (manualPOTrackingType === 'DINH_DANH' ? 20000000 : 350000),
                         },
                       ]);
                     }}
@@ -2035,80 +2308,177 @@ export const PurchaseOrdersView: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="space-y-2 border border-slate-200 rounded-xl p-3 bg-slate-50">
+                <div className="space-y-3 border border-slate-200 rounded-xl p-3 bg-slate-50">
                   {manualPOLines.map((line, idx) => {
                     const availCats = categories.filter((c) => c.tracking_type === manualPOTrackingType);
+                    const selectedCat = categories.find((c) => c.category_id === line.category_id);
+                    const brandOptions = selectedCat?.supported_brands || ['Dell', 'HP', 'Lenovo', 'Asus', 'Apple', 'Canon', 'Brother', 'LG'];
+                    const brandConfigs = (selectedCat?.brand_configs || []).filter(
+                      (cfg) => !line.brand || cfg.brand === line.brand
+                    );
+
                     return (
-                      <div key={idx} className="flex items-center gap-2 bg-white p-2.5 rounded-lg border border-slate-200">
-                        <div className="flex-1">
-                          <select
-                            value={line.category_id}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              const c = categories.find((cat) => cat.category_id === val);
-                              setManualPOLines((prev) =>
-                                prev.map((item, i) =>
-                                  i === idx
-                                    ? {
-                                        ...item,
-                                        category_id: val,
-                                        unit_price: c?.tracking_type === 'DINH_DANH' ? 20000000 : 350000,
-                                      }
-                                    : item
-                                )
-                              );
-                            }}
-                            className="w-full bg-slate-50 border border-slate-300 rounded-lg p-1.5 font-semibold text-slate-900"
-                          >
-                            {availCats.map((c) => (
-                              <option key={c.category_id} value={c.category_id}>
-                                {c.name} ({c.code}) - {c.unit_of_measure}
-                              </option>
-                            ))}
-                          </select>
+                      <div key={idx} className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Tên hàng hóa:</label>
+                            <select
+                              value={line.category_id}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const c = categories.find((cat) => cat.category_id === val);
+                                const firstCfg = c?.brand_configs?.[0];
+                                setManualPOLines((prev) =>
+                                  prev.map((item, i) =>
+                                    i === idx
+                                      ? {
+                                          ...item,
+                                          category_id: val,
+                                          brand: c?.tracking_type === 'DINH_DANH' ? (firstCfg?.brand || c.supported_brands?.[0] || 'Dell') : undefined,
+                                          model_name: c?.tracking_type === 'DINH_DANH' ? (firstCfg?.model_name || '') : undefined,
+                                          specifications: c?.tracking_type === 'DINH_DANH' ? (firstCfg?.specifications || '') : undefined,
+                                          unit_price: firstCfg?.estimated_price || c?.estimated_unit_price || (c?.tracking_type === 'DINH_DANH' ? 20000000 : 350000),
+                                        }
+                                      : item
+                                  )
+                                );
+                              }}
+                              className="w-full bg-slate-50 border border-slate-300 rounded-lg p-1.5 font-bold text-slate-900"
+                            >
+                              {availCats.map((c) => (
+                                <option key={c.category_id} value={c.category_id}>
+                                  {c.name} ({c.code}) - {c.unit_of_measure}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="w-20">
+                            <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Số lượng:</label>
+                            <input
+                              type="number"
+                              min={1}
+                              value={line.qty}
+                              onChange={(e) => {
+                                const v = Math.max(1, Number(e.target.value));
+                                setManualPOLines((prev) =>
+                                  prev.map((item, i) => (i === idx ? { ...item, qty: v } : item))
+                                );
+                              }}
+                              className="w-full bg-slate-50 border border-slate-300 rounded-lg p-1.5 text-center font-mono font-bold"
+                              placeholder="SL"
+                            />
+                          </div>
+
+                          <div className="w-32">
+                            <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Đơn giá (VND):</label>
+                            <input
+                              type="number"
+                              min={1000}
+                              step={50000}
+                              value={line.unit_price}
+                              onChange={(e) => {
+                                const v = Number(e.target.value);
+                                setManualPOLines((prev) =>
+                                  prev.map((item, i) => (i === idx ? { ...item, unit_price: v } : item))
+                                );
+                              }}
+                              className="w-full bg-slate-50 border border-slate-300 rounded-lg p-1.5 text-right font-mono font-bold"
+                              placeholder="Đơn giá"
+                            />
+                          </div>
+
+                          {manualPOLines.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setManualPOLines((prev) => prev.filter((_, i) => i !== idx))}
+                              className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg cursor-pointer mt-4"
+                            >
+                              ✕
+                            </button>
+                          )}
                         </div>
 
-                        <div className="w-24">
-                          <input
-                            type="number"
-                            min={1}
-                            value={line.qty}
-                            onChange={(e) => {
-                              const v = Math.max(1, Number(e.target.value));
-                              setManualPOLines((prev) =>
-                                prev.map((item, i) => (i === idx ? { ...item, qty: v } : item))
-                              );
-                            }}
-                            className="w-full bg-slate-50 border border-slate-300 rounded-lg p-1.5 text-center font-mono font-bold"
-                            placeholder="SL"
-                          />
-                        </div>
+                        {manualPOTrackingType === 'DINH_DANH' && (
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-blue-50/60 p-2.5 rounded-lg border border-blue-200">
+                            <div>
+                              <label className="text-[10px] font-bold text-blue-900 block mb-0.5">Hãng sản xuất:</label>
+                              <select
+                                value={line.brand || ''}
+                                onChange={(e) => {
+                                  const newBrand = e.target.value;
+                                  const firstCfg = (selectedCat?.brand_configs || []).find((c) => c.brand === newBrand);
+                                  setManualPOLines((prev) =>
+                                    prev.map((item, i) =>
+                                      i === idx
+                                        ? {
+                                            ...item,
+                                            brand: newBrand,
+                                            model_name: firstCfg ? firstCfg.model_name : item.model_name,
+                                            specifications: firstCfg ? firstCfg.specifications : item.specifications,
+                                            unit_price: firstCfg?.estimated_price || item.unit_price,
+                                          }
+                                        : item
+                                    )
+                                  );
+                                }}
+                                className="w-full bg-white border border-blue-300 rounded-md p-1.5 font-bold text-blue-900 text-xs"
+                              >
+                                {brandOptions.map((b) => (
+                                  <option key={b} value={b}>
+                                    Hãng {b}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
 
-                        <div className="w-32">
-                          <input
-                            type="number"
-                            min={1000}
-                            step={50000}
-                            value={line.unit_price}
-                            onChange={(e) => {
-                              const v = Number(e.target.value);
-                              setManualPOLines((prev) =>
-                                prev.map((item, i) => (i === idx ? { ...item, unit_price: v } : item))
-                              );
-                            }}
-                            className="w-full bg-slate-50 border border-slate-300 rounded-lg p-1.5 text-right font-mono font-bold"
-                            placeholder="Đơn giá"
-                          />
-                        </div>
+                            <div className="sm:col-span-2">
+                              <label className="text-[10px] font-bold text-blue-900 block mb-0.5">
+                                Chọn Dòng máy & Cấu hình chuẩn ({line.brand}):
+                              </label>
+                              <select
+                                value={line.model_name || ''}
+                                onChange={(e) => {
+                                  const m = e.target.value;
+                                  const foundCfg = (selectedCat?.brand_configs || []).find((c) => c.model_name === m);
+                                  setManualPOLines((prev) =>
+                                    prev.map((item, i) =>
+                                      i === idx
+                                        ? {
+                                            ...item,
+                                            model_name: m,
+                                            specifications: foundCfg ? foundCfg.specifications : item.specifications,
+                                            unit_price: foundCfg?.estimated_price || item.unit_price,
+                                          }
+                                        : item
+                                    )
+                                  );
+                                }}
+                                className="w-full bg-white border border-blue-300 rounded-md p-1.5 font-semibold text-slate-800 text-xs"
+                              >
+                                {brandConfigs.map((cfg) => (
+                                  <option key={cfg.model_name} value={cfg.model_name}>
+                                    {cfg.model_name} — {cfg.specifications}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
 
-                        {manualPOLines.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => setManualPOLines((prev) => prev.filter((_, i) => i !== idx))}
-                            className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg cursor-pointer"
-                          >
-                            ✕
-                          </button>
+                            <div className="sm:col-span-3">
+                              <input
+                                type="text"
+                                value={line.specifications || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setManualPOLines((prev) =>
+                                    prev.map((item, i) => (i === idx ? { ...item, specifications: val } : item))
+                                  );
+                                }}
+                                placeholder="Cấu hình chi tiết..."
+                                className="w-full bg-white border border-slate-300 rounded-md p-1.5 text-xs"
+                              />
+                            </div>
+                          </div>
                         )}
                       </div>
                     );

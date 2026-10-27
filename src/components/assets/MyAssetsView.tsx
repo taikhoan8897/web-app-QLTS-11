@@ -186,7 +186,17 @@ export const MyAssetsView: React.FC<MyAssetsViewProps> = ({
                           <Cpu className="w-5 h-5" />
                         </span>
                         <div>
-                          <h4 className="font-bold text-slate-900 text-sm">{cat?.name}</h4>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className="font-bold text-slate-900 text-sm">{cat?.name}</h4>
+                            {ast.brand && (
+                              <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 border border-indigo-200 font-bold text-[10px]">
+                                Hãng: {ast.brand}
+                              </span>
+                            )}
+                          </div>
+                          {ast.model_name && (
+                            <div className="text-xs font-semibold text-slate-700">{ast.model_name}</div>
+                          )}
                           <span className="font-mono text-xs text-emerald-800 font-bold">
                             {ast.asset_code}
                           </span>
@@ -215,8 +225,8 @@ export const MyAssetsView: React.FC<MyAssetsViewProps> = ({
                       </div>
                       {ast.specifications && (
                         <div className="col-span-2 pt-1 border-t border-slate-200">
-                          <span className="text-slate-400 block text-[11px]">Cấu hình:</span>
-                          <span className="text-slate-600 line-clamp-1">{ast.specifications}</span>
+                          <span className="text-slate-400 block text-[11px]">Cấu hình chi tiết:</span>
+                          <span className="text-slate-700 font-medium">{ast.specifications}</span>
                         </div>
                       )}
                     </div>
@@ -233,7 +243,7 @@ export const MyAssetsView: React.FC<MyAssetsViewProps> = ({
                         <button
                           onClick={() => {
                             onOpenTemplates('BIEN_BAN_BAN_GIAO', {
-                              assetName: cat?.name,
+                              assetName: `${cat?.name || 'Tài sản'}${ast.brand ? ` (${ast.brand}${ast.model_name ? ` - ${ast.model_name}` : ''})` : ''}${ast.specifications ? ` [${ast.specifications}]` : ''}`,
                               assetCode: ast.asset_code,
                               serialNo: ast.serial_no,
                               recipientName: currentUser.full_name,

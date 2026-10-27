@@ -105,6 +105,28 @@ class DatabaseStore {
           st.serviceExpenses = JSON.parse(JSON.stringify(INITIAL_SERVICE_EXPENSES));
           updated = true;
         }
+        if (
+          !st.categories ||
+          !st.categories.some((c: any) => c.category_id === 'CAT-01' && Array.isArray(c.brand_configs) && c.brand_configs.length > 0)
+        ) {
+          st.categories = JSON.parse(JSON.stringify(INITIAL_CATEGORIES));
+          updated = true;
+        }
+        if (
+          !st.assets ||
+          st.assets.length < 12 ||
+          !st.assets.some((a: any) => a.brand)
+        ) {
+          st.assets = JSON.parse(JSON.stringify(INITIAL_ASSETS));
+          updated = true;
+        }
+        if (
+          !st.purchaseOrders ||
+          !st.purchaseOrders.some((p: any) => (p.lines || []).some((l: any) => l.brand))
+        ) {
+          st.purchaseOrders = JSON.parse(JSON.stringify(INITIAL_PURCHASE_ORDERS));
+          updated = true;
+        }
         if (updated) {
           try {
             fs.writeFileSync(DB_FILE, JSON.stringify(st, null, 2), 'utf-8');
@@ -385,6 +407,8 @@ class DatabaseStore {
   // 5. PO Identification: Create Serialized Assets from PO lines
   public identifyPOAssets(po_id: string, declarations: Array<{
     category_id: string;
+    brand?: string;
+    model_name?: string;
     serial_no: string;
     specifications?: string;
     warranty_from?: string;
@@ -405,6 +429,8 @@ class DatabaseStore {
         asset_id: `AST-${Date.now()}-${idx + 1}`,
         asset_code: assetCode,
         category_id: decl.category_id,
+        brand: decl.brand || undefined,
+        model_name: decl.model_name || undefined,
         serial_no: decl.serial_no,
         specifications: decl.specifications || 'Tiêu chuẩn từ đơn PO',
         po_id: po.po_id,
@@ -583,7 +609,7 @@ class DatabaseStore {
     return req;
   }
 
-  // 9b. Update Request (Drafts or pending requests)
+  // 9b. Update Request (Drafts or active requests)
   public updateRequest(request_id: string, data: any) {
     const req = (this.state.requests || []).find((r: any) => r.request_id === request_id);
     if (!req) throw new Error('Không tìm thấy yêu cầu cấp phát!');
@@ -606,10 +632,14 @@ class DatabaseStore {
       req.attachment_file = data.attachment_file;
     }
 
-    if (data.is_draft !== undefined) {
-      req.status = data.is_draft ? 'NHAP' : 'CHO_TIEP_NHAN';
-    } else if (data.status !== undefined) {
+    if (data.status !== undefined) {
       req.status = data.status;
+    } else if (data.is_draft !== undefined) {
+      if (data.is_draft) {
+        req.status = 'NHAP';
+      } else if (req.status === 'NHAP') {
+        req.status = 'CHO_TIEP_NHAN';
+      }
     }
     req.updated_at = new Date().toISOString();
 
@@ -720,6 +750,30 @@ class DatabaseStore {
       created_at: nowStr,
     };
     this.state.tickets.unshift(tck);
+    this.save();
+    return tck;
+  }
+
+  // 13b. Update Ticket
+  public updateTicket(ticket_id: string, data: any) {
+    const tck = (this.state.tickets || []).find((t: any) => t.ticket_id === ticket_id);
+    if (!tck) throw new Error('Không tìm thấy ticket sự cố!');
+
+    if (data.issue_type !== undefined) tck.issue_type = data.issue_type;
+    if (data.description !== undefined) tck.description = data.description;
+    if (data.priority !== undefined) tck.priority = data.priority;
+    if (data.asset_id !== undefined) tck.asset_id = data.asset_id;
+    if (data.assigned_to !== undefined) tck.assigned_to = data.assigned_to;
+    if (data.status !== undefined) tck.status = data.status;
+    if (data.attachment_name !== undefined) {
+      tck.attachment_file = data.attachment_name
+        ? { file_name: data.attachment_name, uploaded_at: new Date().toISOString() }
+        : undefined;
+    } else if (data.attachment_file !== undefined) {
+      tck.attachment_file = data.attachment_file;
+    }
+    tck.updated_at = new Date().toISOString();
+
     this.save();
     return tck;
   }

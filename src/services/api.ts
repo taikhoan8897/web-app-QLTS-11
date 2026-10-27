@@ -196,6 +196,13 @@ export const serverApi = {
     });
   },
 
+  async updateTicket(ticket_id: string, data: any): Promise<SupportTicket> {
+    return request<SupportTicket>(`/api/tickets/${ticket_id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
   async assignTicket(ticket_id: string, technician_id: string): Promise<SupportTicket> {
     return request<SupportTicket>(`/api/tickets/${ticket_id}/assign`, {
       method: 'PATCH',

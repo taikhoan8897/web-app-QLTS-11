@@ -108,6 +108,13 @@ export interface Supplier {
   note?: string;
 }
 
+export interface BrandConfigOption {
+  brand: string;
+  model_name: string;
+  specifications: string;
+  estimated_price?: number;
+}
+
 export interface Category {
   category_id: string;
   code: string;
@@ -125,12 +132,17 @@ export interface Category {
   status: 'ACTIVE' | 'INACTIVE';
   description?: string;
   prefix?: string;
+  estimated_unit_price?: number;
+  supported_brands?: string[];
+  brand_configs?: BrandConfigOption[];
 }
 
 export interface Asset {
   asset_id: string;
   asset_code: string;
   category_id: string;
+  brand?: string;
+  model_name?: string;
   serial_no: string;
   warranty_from?: string;
   warranty_to?: string;
@@ -181,6 +193,9 @@ export interface PurchaseOrderLine {
   po_id: string;
   category_id: string;
   tracking_type: TrackingType;
+  brand?: string;
+  model_name?: string;
+  specifications?: string;
   qty_requested: number;
   qty_ordered: number;
   qty_received: number;

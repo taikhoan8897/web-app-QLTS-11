@@ -80,6 +80,7 @@ interface AppContextType {
       supplier_name?: string;
       note?: string;
       merge_same_category?: boolean;
+      lineConfigs?: Record<string, { brand?: string; model_name?: string; specifications?: string; estimated_unit_price?: number }>;
     }
   ) => { success: boolean; message: string; po_id?: string; po_code?: string };
 
@@ -89,6 +90,10 @@ interface AppContextType {
       receiving_warehouse_id: string;
       supplier_name?: string;
       note?: string;
+      brand?: string;
+      model_name?: string;
+      specifications?: string;
+      estimated_unit_price?: number;
     }
   ) => { success: boolean; message: string; po_id?: string; po_code?: string };
 
@@ -161,6 +166,18 @@ interface AppContextType {
     }
   ) => { success: boolean; message: string };
 
+  updateTicket: (
+    ticketId: string,
+    data: {
+      issue_type?: SupportTicket['issue_type'];
+      description?: string;
+      priority?: SupportTicket['priority'];
+      asset_id?: string | null;
+      attachment_name?: string;
+      assigned_to?: string;
+    }
+  ) => { success: boolean; message: string };
+
   assignTicket: (ticketId: string, technicianId: string) => void;
 
   completeTicketScenario: (
@@ -198,6 +215,9 @@ interface AppContextType {
       note?: string;
       lines: {
         category_id: string;
+        brand?: string;
+        model_name?: string;
+        specifications?: string;
         qty_requested: number;
         estimated_unit_price: number;
         source_type: PurchaseOrderLine['source_type'];
@@ -210,7 +230,14 @@ interface AppContextType {
     poId: string,
     data: {
       supplier_name: string;
-      linesActual: { line_id: string; actual_unit_price: number; qty_received: number }[];
+      linesActual: {
+        line_id: string;
+        actual_unit_price: number;
+        qty_received: number;
+        brand?: string;
+        model_name?: string;
+        specifications?: string;
+      }[];
       isPartialDelivery: boolean;
     }
   ) => { success: boolean; message: string };
@@ -226,6 +253,8 @@ interface AppContextType {
     warehouseId: string,
     declarations: {
       category_id: string;
+      brand?: string;
+      model_name?: string;
       serial_no: string;
       specifications?: string;
       warranty_from?: string;
@@ -233,6 +262,33 @@ interface AppContextType {
       purchase_cost: number;
       location: string;
     }[]
+  ) => { success: boolean; message: string };
+
+  createManualAsset: (data: {
+    category_id: string;
+    warehouse_id: string;
+    brand: string;
+    model_name: string;
+    specifications: string;
+    serial_no: string;
+    purchase_cost: number;
+    warranty_from?: string;
+    warranty_to?: string;
+    location: string;
+  }) => { success: boolean; message: string; asset?: Asset };
+
+  updateAssetDetails: (
+    assetId: string,
+    data: {
+      brand?: string;
+      model_name?: string;
+      specifications?: string;
+      serial_no?: string;
+      location?: string;
+      purchase_cost?: number;
+      warranty_from?: string;
+      warranty_to?: string;
+    }
   ) => { success: boolean; message: string };
 
   issueAssetDirect: (
@@ -314,7 +370,7 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'THACO_AGRI_ASSET_MGMT_STATE_V4';
+const STORAGE_KEY = 'THACO_AGRI_ASSET_MGMT_STATE_V5';
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Load state from localStorage or initial mock data
@@ -392,10 +448,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (serverData.employees) setEmployees(serverData.employees);
           if (serverData.warehouses) setWarehouses(serverData.warehouses);
           if (serverData.suppliers) setSuppliers(serverData.suppliers);
-          if (serverData.categories) setCategories(serverData.categories);
-          if (serverData.assets) setAssets(serverData.assets);
+          if (
+            serverData.categories &&
+            serverData.categories.some((c: Category) => c.category_id === 'CAT-01' && Array.isArray(c.brand_configs) && c.brand_configs.length > 0)
+          ) {
+            setCategories(serverData.categories);
+          } else {
+            setCategories(INITIAL_CATEGORIES);
+          }
+          if (
+            serverData.assets &&
+            serverData.assets.length >= 12 &&
+            serverData.assets.some((a: Asset) => a.brand)
+          ) {
+            setAssets(serverData.assets);
+          } else {
+            setAssets(INITIAL_ASSETS);
+          }
           if (serverData.stockBalances) setStockBalances(serverData.stockBalances);
-          if (serverData.purchaseOrders) setPurchaseOrders(serverData.purchaseOrders);
+          if (
+            serverData.purchaseOrders &&
+            serverData.purchaseOrders.some((p: PurchaseOrder) => p.lines.some((l) => l.brand))
+          ) {
+            setPurchaseOrders(serverData.purchaseOrders);
+          } else {
+            setPurchaseOrders(INITIAL_PURCHASE_ORDERS);
+          }
           if (serverData.procurementDemands) setProcurementDemands(serverData.procurementDemands);
           if (serverData.requests) setRequests(serverData.requests);
           if (serverData.tickets) setTickets(serverData.tickets);
@@ -679,20 +757,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const updatedLines: RequestLine[] = data.lines
-      ? data.lines.map((l, idx) => ({
-          request_line_id: `RQL-${Date.now()}-${idx}`,
-          request_id: requestId,
-          category_id: l.category_id,
-          qty_requested: l.qty_requested,
-          qty_reserved: 0,
-          qty_issued: 0,
-          qty_to_purchase: 0,
-          note: l.note,
-        }))
+      ? data.lines.map((l, idx) => {
+          const existingLine = target.lines.find((el) => el.category_id === l.category_id);
+          return {
+            request_line_id: existingLine?.request_line_id || `RQL-${Date.now()}-${idx}`,
+            request_id: requestId,
+            category_id: l.category_id,
+            qty_requested: l.qty_requested,
+            qty_reserved: existingLine?.qty_reserved || 0,
+            qty_issued: existingLine?.qty_issued || 0,
+            qty_to_purchase: Math.max(0, l.qty_requested - (existingLine?.qty_issued || 0)),
+            note: l.note,
+          };
+        })
       : target.lines;
 
     const newStatus: AssetRequest['status'] =
-      data.is_draft !== undefined ? (data.is_draft ? 'NHAP' : 'CHO_TIEP_NHAN') : target.status;
+      data.is_draft !== undefined
+        ? data.is_draft
+          ? 'NHAP'
+          : target.status === 'NHAP'
+          ? 'CHO_TIEP_NHAN'
+          : target.status
+        : target.status;
 
     const newAttachment = effectiveAttachment
       ? {
@@ -731,7 +818,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .catch(console.warn);
 
     addAuditLog(
-      data.is_draft ? 'SUA_NHAP_YEU_CAU' : 'GUI_DUYET_YEU_CAU',
+      data.is_draft ? 'SUA_NHAP_YEU_CAU' : 'CAP_NHAT_YEU_CAU',
       'REQUEST',
       requestId,
       target.status,
@@ -744,7 +831,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       message:
         data.is_draft
           ? `Đã cập nhật bản nháp yêu cầu ${target.request_code} thành công!`
-          : `Đã gửi duyệt yêu cầu cấp phát ${target.request_code} thành công vào hàng đợi Thủ kho.`,
+          : `Đã lưu cập nhật đề xuất cấp phát ${target.request_code} thành công!`,
     };
   };
 
@@ -1103,6 +1190,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       supplier_name?: string;
       note?: string;
       merge_same_category?: boolean;
+      lineConfigs?: Record<string, { brand?: string; model_name?: string; specifications?: string; estimated_unit_price?: number }>;
     }
   ) => {
     if (!demandIds || demandIds.length === 0) {
@@ -1139,8 +1227,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         Object.entries(grouped).forEach(([catId, groupItems], idx) => {
           const cat = categories.find((c) => c.category_id === catId);
+          const cfg = options.lineConfigs?.[catId] || options.lineConfigs?.[groupItems[0].demand_id];
+          const defaultCfg = cat?.brand_configs?.[0];
           const totalQty = groupItems.reduce((sum, it) => sum + it.qty_needed, 0);
-          const avgPrice = groupItems[0].estimated_unit_price || (trackType === 'DINH_DANH' ? 20000000 : 350000);
+          const avgPrice = cfg?.estimated_unit_price || defaultCfg?.estimated_price || groupItems[0].estimated_unit_price || (trackType === 'DINH_DANH' ? 20000000 : 350000);
           const sourceSummaries = groupItems.map((it) => `${it.source_code} (${it.requester_name}: ${it.qty_needed})`).join(', ');
 
           lines.push({
@@ -1148,6 +1238,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             po_id: targetPoId,
             category_id: catId,
             tracking_type: trackType,
+            brand: trackType === 'DINH_DANH' ? (cfg?.brand || defaultCfg?.brand) : undefined,
+            model_name: trackType === 'DINH_DANH' ? (cfg?.model_name || defaultCfg?.model_name) : undefined,
+            specifications: trackType === 'DINH_DANH' ? (cfg?.specifications || defaultCfg?.specifications) : undefined,
             qty_requested: totalQty,
             qty_ordered: totalQty,
             qty_received: 0,
@@ -1165,16 +1258,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       } else {
         items.forEach((dem, idx) => {
+          const cat = categories.find((c) => c.category_id === dem.category_id);
+          const cfg = options.lineConfigs?.[dem.demand_id] || options.lineConfigs?.[dem.category_id];
+          const defaultCfg = cat?.brand_configs?.[0];
+          const estPrice = cfg?.estimated_unit_price || defaultCfg?.estimated_price || dem.estimated_unit_price || (trackType === 'DINH_DANH' ? 20000000 : 350000);
           lines.push({
             line_id: `POL-GOM-${Date.now()}-${idx}-${trackType}`,
             po_id: targetPoId,
             category_id: dem.category_id,
             tracking_type: trackType,
+            brand: trackType === 'DINH_DANH' ? (cfg?.brand || defaultCfg?.brand) : undefined,
+            model_name: trackType === 'DINH_DANH' ? (cfg?.model_name || defaultCfg?.model_name) : undefined,
+            specifications: trackType === 'DINH_DANH' ? (cfg?.specifications || defaultCfg?.specifications) : undefined,
             qty_requested: dem.qty_needed,
             qty_ordered: dem.qty_needed,
             qty_received: 0,
             qty_identified: 0,
-            estimated_unit_price: dem.estimated_unit_price || (trackType === 'DINH_DANH' ? 20000000 : 350000),
+            estimated_unit_price: estPrice,
             actual_unit_price: 0,
             amount: 0,
             warehouse_id: options.receiving_warehouse_id,
@@ -1311,6 +1411,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       receiving_warehouse_id: string;
       supplier_name?: string;
       note?: string;
+      brand?: string;
+      model_name?: string;
+      specifications?: string;
+      estimated_unit_price?: number;
     }
   ) => {
     const dem = procurementDemands.find((d) => d.demand_id === demandId);
@@ -1321,17 +1425,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const prefix = trackType === 'DINH_DANH' ? 'DD' : 'TH';
     const poId = `PO-2026-${String(purchaseOrders.length + 1).padStart(3, '0')}`;
     const poCode = `PO-AGRI-RIENG-${prefix}-${Date.now().toString().slice(-4)}`;
+    const defaultCfg = cat?.brand_configs?.[0];
+    const estPrice = options.estimated_unit_price || defaultCfg?.estimated_price || dem.estimated_unit_price || (trackType === 'DINH_DANH' ? 20000000 : 350000);
 
     const line: PurchaseOrderLine = {
       line_id: `POL-RIENG-${Date.now()}`,
       po_id: poId,
       category_id: dem.category_id,
       tracking_type: trackType,
+      brand: trackType === 'DINH_DANH' ? (options.brand || defaultCfg?.brand) : undefined,
+      model_name: trackType === 'DINH_DANH' ? (options.model_name || defaultCfg?.model_name) : undefined,
+      specifications: trackType === 'DINH_DANH' ? (options.specifications || defaultCfg?.specifications) : undefined,
       qty_requested: dem.qty_needed,
       qty_ordered: dem.qty_needed,
       qty_received: 0,
       qty_identified: 0,
-      estimated_unit_price: dem.estimated_unit_price || (trackType === 'DINH_DANH' ? 20000000 : 350000),
+      estimated_unit_price: estPrice,
       actual_unit_price: 0,
       amount: 0,
       warehouse_id: options.receiving_warehouse_id,
@@ -1355,7 +1464,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       receiving_warehouse_id: options.receiving_warehouse_id,
       supplier_name: options.supplier_name || (trackType === 'DINH_DANH' ? 'Đại lý phân phối Thiết bị CNTT' : 'Nhà phân phối Vật tư Tiêu hao'),
       parent_po_id: null,
-      total_amount: (dem.qty_needed * (dem.estimated_unit_price || (trackType === 'DINH_DANH' ? 20000000 : 350000))),
+      total_amount: dem.qty_needed * estPrice,
       created_at: new Date().toISOString(),
       note: options.note ? `${options.note} [PO Riêng]` : `PO riêng biệt cho nhu cầu ${dem.source_code} (${dem.requester_name})`,
       aggregated_demand_count: 1,
@@ -1538,6 +1647,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return {
       success: true,
       message: `Đã tạo ticket kỹ thuật mã ${tckCode} thành công. Kỹ thuật viên sẽ tiếp nhận kiểm tra.`,
+    };
+  };
+
+  const updateTicket = (
+    ticketId: string,
+    data: {
+      issue_type?: SupportTicket['issue_type'];
+      description?: string;
+      priority?: SupportTicket['priority'];
+      asset_id?: string | null;
+      attachment_name?: string;
+      assigned_to?: string;
+    }
+  ) => {
+    const target = tickets.find((t) => t.ticket_id === ticketId);
+    if (!target) return { success: false, message: 'Không tìm thấy ticket sự cố!' };
+
+    const updatedAttachment =
+      data.attachment_name !== undefined
+        ? data.attachment_name
+          ? { file_name: data.attachment_name, uploaded_at: new Date().toISOString() }
+          : undefined
+        : target.attachment_file;
+
+    setTickets((prev) =>
+      prev.map((t) =>
+        t.ticket_id === ticketId
+          ? {
+              ...t,
+              issue_type: data.issue_type ?? t.issue_type,
+              description: data.description ?? t.description,
+              priority: data.priority ?? t.priority,
+              asset_id: data.asset_id !== undefined ? data.asset_id : t.asset_id,
+              assigned_to: data.assigned_to !== undefined ? data.assigned_to : t.assigned_to,
+              attachment_file: updatedAttachment,
+              updated_at: new Date().toISOString(),
+            }
+          : t
+      )
+    );
+
+    serverApi
+      .updateTicket(ticketId, {
+        issue_type: data.issue_type,
+        description: data.description,
+        priority: data.priority,
+        asset_id: data.asset_id,
+        assigned_to: data.assigned_to,
+        attachment_name: data.attachment_name,
+      })
+      .catch(console.warn);
+
+    addAuditLog(
+      'CAP_NHAT_TICKET_KY_THUAT',
+      'TICKET',
+      ticketId,
+      target.description,
+      data.description || target.description,
+      `Chỉnh sửa thông tin ticket sự cố ${target.ticket_code}`
+    );
+
+    return {
+      success: true,
+      message: `Đã lưu cập nhật thông tin ticket ${target.ticket_code} thành công!`,
     };
   };
 
@@ -1949,6 +2122,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     note?: string;
     lines: {
       category_id: string;
+      brand?: string;
+      model_name?: string;
+      specifications?: string;
       qty_requested: number;
       estimated_unit_price: number;
       source_type: PurchaseOrderLine['source_type'];
@@ -1967,6 +2143,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         po_id: poId,
         category_id: l.category_id,
         tracking_type: data.tracking_type,
+        brand: l.brand,
+        model_name: l.model_name,
+        specifications: l.specifications,
         qty_requested: l.qty_requested,
         qty_ordered: l.qty_requested,
         qty_received: 0,
@@ -2011,7 +2190,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     poId: string,
     data: {
       supplier_name: string;
-      linesActual: { line_id: string; actual_unit_price: number; qty_received: number }[];
+      linesActual: {
+        line_id: string;
+        actual_unit_price: number;
+        qty_received: number;
+        brand?: string;
+        model_name?: string;
+        specifications?: string;
+      }[];
       isPartialDelivery: boolean;
     }
   ) => {
@@ -2021,6 +2207,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let totalActual = 0;
     const remainingMissingLines: {
       category_id: string;
+      brand?: string;
+      model_name?: string;
+      specifications?: string;
       qty_missing: number;
       actual_unit_price: number;
     }[] = [];
@@ -2033,9 +2222,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       totalActual += lineTotal;
 
       const qtyMissing = l.qty_ordered - act.qty_received;
+      const finalBrand = act.brand !== undefined ? act.brand : l.brand;
+      const finalModel = act.model_name !== undefined ? act.model_name : l.model_name;
+      const finalSpecs = act.specifications !== undefined ? act.specifications : l.specifications;
+
       if (qtyMissing > 0) {
         remainingMissingLines.push({
           category_id: l.category_id,
+          brand: finalBrand,
+          model_name: finalModel,
+          specifications: finalSpecs,
           qty_missing: qtyMissing,
           actual_unit_price: act.actual_unit_price,
         });
@@ -2043,6 +2239,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       return {
         ...l,
+        brand: finalBrand,
+        model_name: finalModel,
+        specifications: finalSpecs,
         qty_received: act.qty_received,
         actual_unit_price: act.actual_unit_price,
         amount: lineTotal,
@@ -2082,6 +2281,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         po_id: childPoId,
         category_id: rm.category_id,
         tracking_type: po.tracking_type,
+        brand: rm.brand,
+        model_name: rm.model_name,
+        specifications: rm.specifications,
         qty_requested: rm.qty_missing,
         qty_ordered: rm.qty_missing,
         qty_received: 0,
@@ -2129,7 +2331,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       poId,
       po.status,
       nextStatus,
-      `Thu mua cập nhật giá thực tế & số lượng. Chuyển sang Kho tiếp nhận.`
+      `Thu mua cập nhật giá thực tế, hãng & cấu hình. Chuyển sang Kho tiếp nhận.`
     );
 
     return {
@@ -2241,6 +2443,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     warehouseId: string,
     declarations: {
       category_id: string;
+      brand?: string;
+      model_name?: string;
       serial_no: string;
       specifications?: string;
       warranty_from?: string;
@@ -2265,9 +2469,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const assetCode = `AGRI-${prefix}-2026-${seq}`;
 
       const newAsset: Asset = {
-        asset_id: `AST-2026-${seq}`,
+        asset_id: `AST-2026-${seq}-${Date.now().toString().slice(-3)}`,
         asset_code: assetCode,
         category_id: decl.category_id,
+        brand: decl.brand,
+        model_name: decl.model_name,
         serial_no: decl.serial_no,
         warranty_from: decl.warranty_from,
         warranty_to: decl.warranty_to,
@@ -2297,12 +2503,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         to_unit: owningUnitId,
         source_type: 'PO',
         source_id: po.po_code,
-        note: `Khai báo tài sản định danh từ đơn mua hàng ${po.po_code}. Serial: ${decl.serial_no}`,
+        note: `Khai báo tài sản định danh từ đơn mua hàng ${po.po_code}. Hãng: ${decl.brand || 'N/A'} - ${decl.model_name || ''} | Serial: ${decl.serial_no}`,
         performed_by: `${currentUser.full_name} (Thủ kho)`,
       });
     });
 
-    setAssets((prev) => [...prev, ...newCreatedAssets]);
+    setAssets((prev) => [...newCreatedAssets, ...prev]);
     setAssetEvents((prev) => [...newEvents, ...prev]);
 
     // Update PO lines identified count
@@ -2339,7 +2545,122 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     return {
       success: true,
-      message: `Đã khai báo ${declarations.length} thiết bị định danh thành công vào kho! Mã QR và hồ sơ tài sản đã được tạo.`,
+      message: `Đã khai báo ${declarations.length} thiết bị định danh thành công vào kho! Mã QR, Hãng sản xuất, Cấu hình và hồ sơ tài sản đã được tạo.`,
+    };
+  };
+
+  const createManualAsset = (data: {
+    category_id: string;
+    warehouse_id: string;
+    brand: string;
+    model_name: string;
+    specifications: string;
+    serial_no: string;
+    purchase_cost: number;
+    warranty_from?: string;
+    warranty_to?: string;
+    location: string;
+  }) => {
+    const cat = categories.find((c) => c.category_id === data.category_id);
+    if (!cat) return { success: false, message: 'Không tìm thấy danh mục tài sản!' };
+
+    const wh = warehouses.find((w) => w.warehouse_id === data.warehouse_id);
+    const owningUnitId = wh ? wh.owning_unit_id : 'UNIT-01';
+    const prefix = cat.prefix || 'AST';
+    const seq = String(assets.length + 1).padStart(4, '0');
+    const assetCode = `AGRI-${prefix}-2026-${seq}`;
+
+    const newAsset: Asset = {
+      asset_id: `AST-2026-${seq}-${Date.now().toString().slice(-3)}`,
+      asset_code: assetCode,
+      category_id: data.category_id,
+      brand: data.brand,
+      model_name: data.model_name,
+      specifications: data.specifications,
+      serial_no: data.serial_no,
+      warranty_from: data.warranty_from || new Date().toISOString().slice(0, 10),
+      warranty_to: data.warranty_to || new Date(Date.now() + 365 * 24 * 3600 * 1000 * 2).toISOString().slice(0, 10),
+      purchase_cost: data.purchase_cost,
+      owning_unit_id: owningUnitId,
+      warehouse_id: data.warehouse_id,
+      holder_employee_id: null,
+      holder_unit_snapshot: null,
+      location: data.location || 'Kệ lưu trữ trung tâm',
+      status: 'TRONG_KHO',
+      qr_code: assetCode,
+      created_at: new Date().toISOString(),
+    };
+
+    const newEvent: AssetEvent = {
+      event_id: `EVT-${Date.now()}`,
+      asset_id: newAsset.asset_id,
+      event_type: 'NHAP_KHO',
+      occurred_at: new Date().toISOString(),
+      before_status: 'CHO_DINH_DANH',
+      after_status: 'TRONG_KHO',
+      to_unit: owningUnitId,
+      source_type: 'MANUAL',
+      note: `Nhập / Khai báo tài sản định danh trực tiếp vào kho. Hãng: ${data.brand} - ${data.model_name} (${data.specifications}). Serial: ${data.serial_no}`,
+      performed_by: `${currentUser.full_name} (Thủ kho)`,
+    };
+
+    setAssets((prev) => [newAsset, ...prev]);
+    setAssetEvents((prev) => [newEvent, ...prev]);
+    addAuditLog(
+      'KHAI_BAO_TAI_SAN_TRUC_TIEP',
+      'ASSET',
+      newAsset.asset_id,
+      undefined,
+      `${assetCode} (${data.brand} ${data.model_name})`,
+      `Khai báo tài sản định danh mới vào kho: ${cat.name} - Hãng ${data.brand} (${data.model_name})`
+    );
+
+    return {
+      success: true,
+      message: `Đã khai báo tài sản ${assetCode} (${cat.name} • Hãng ${data.brand} ${data.model_name}) vào kho thành công!`,
+      asset: newAsset,
+    };
+  };
+
+  const updateAssetDetails = (
+    assetId: string,
+    data: {
+      brand?: string;
+      model_name?: string;
+      specifications?: string;
+      serial_no?: string;
+      location?: string;
+      purchase_cost?: number;
+      warranty_from?: string;
+      warranty_to?: string;
+    }
+  ) => {
+    const ast = assets.find((a) => a.asset_id === assetId);
+    if (!ast) return { success: false, message: 'Không tìm thấy tài sản!' };
+
+    setAssets((prev) =>
+      prev.map((a) =>
+        a.asset_id === assetId
+          ? {
+              ...a,
+              ...data,
+            }
+          : a
+      )
+    );
+
+    addAuditLog(
+      'CAP_NHAT_THONG_TIN_TAI_SAN',
+      'ASSET',
+      assetId,
+      `${ast.brand || ''} ${ast.model_name || ''} | ${ast.specifications || ''}`,
+      `${data.brand || ast.brand || ''} ${data.model_name || ast.model_name || ''} | ${data.specifications || ast.specifications || ''}`,
+      `Cập nhật thông tin Hãng & Cấu hình cho tài sản ${ast.asset_code}`
+    );
+
+    return {
+      success: true,
+      message: `Đã cập nhật thông tin Hãng sản xuất & Cấu hình cho tài sản ${ast.asset_code} thành công!`,
     };
   };
 
@@ -3138,6 +3459,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         issueRequestAllocation,
         convertRequestToPO,
         createTicket,
+        updateTicket,
         assignTicket,
         completeTicketScenario,
         proposeTicketScenario,
@@ -3146,6 +3468,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         procurePO,
         receivePOConsumable,
         identifyPOAssets,
+        createManualAsset,
+        updateAssetDetails,
         issueAssetDirect,
         issueConsumableDirect,
         recallAsset,

@@ -206,6 +206,16 @@ apiRouter.post('/tickets', (req: Request, res: Response) => {
   }
 });
 
+// PUT /api/tickets/:id - Update technical support ticket
+apiRouter.put('/tickets/:id', (req: Request, res: Response) => {
+  try {
+    const tck = dbStore.updateTicket(req.params.id, req.body);
+    res.json(tck);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Lỗi khi chỉnh sửa ticket kỹ thuật' });
+  }
+});
+
 // PATCH /api/tickets/:id/assign - Assign ticket to technician
 apiRouter.patch('/tickets/:id/assign', (req: Request, res: Response) => {
   try {

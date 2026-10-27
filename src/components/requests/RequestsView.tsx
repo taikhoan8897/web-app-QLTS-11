@@ -100,7 +100,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
   // Filter requests
   const myRequests = requests.filter((r) => r.requester_id === currentUser.employee_id);
   const warehouseQueueRequests = requests.filter(
-    (r) => r.status !== 'NHAP' && r.status !== 'HUY'
+    (r) => r.status !== 'HUY'
   );
 
   // Open Create New Request
@@ -607,17 +607,15 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                       <td className="py-3 px-4 text-center">
                         {isWarehouseStaff ? (
                           <div className="inline-flex flex-wrap items-center justify-center gap-1">
-                            {/* Nút sửa yêu cầu cho bản nháp hoặc yêu cầu chờ duyệt do chính mình tạo */}
-                            {(req.status === 'NHAP' || (req.requester_id === currentUser.employee_id && req.status === 'CHO_TIEP_NHAN')) && (
-                              <button
-                                onClick={() => handleOpenEditRequest(req)}
-                                className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded font-bold text-[11px] transition cursor-pointer flex items-center gap-1 shadow-xs"
-                                title="Chỉnh sửa đề xuất và bổ sung file đính kèm"
-                              >
-                                <Edit3 className="w-3.5 h-3.5 text-amber-700" />
-                                {req.status === 'NHAP' ? 'Sửa & Gửi' : 'Sửa'}
-                              </button>
-                            )}
+                            {/* Nút sửa yêu cầu đã tạo */}
+                            <button
+                              onClick={() => handleOpenEditRequest(req)}
+                              className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded font-bold text-[11px] transition cursor-pointer flex items-center gap-1 shadow-xs"
+                              title="Chỉnh sửa thông tin đề xuất cấp phát và file đính kèm"
+                            >
+                              <Edit3 className="w-3.5 h-3.5 text-amber-700" />
+                              {req.status === 'NHAP' ? 'Sửa & Gửi' : 'Sửa'}
+                            </button>
                             {/* Bước 28: Nếu Thủ kho tiếp nhận */}
                             {isPending && (
                               <>
@@ -723,16 +721,14 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                                 Đang chờ Thủ kho tiếp nhận
                               </span>
                             )}
-                            {(req.status === 'NHAP' || req.status === 'CHO_TIEP_NHAN') && (
-                              <button
-                                onClick={() => handleOpenEditRequest(req)}
-                                className="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded font-bold text-[11px] transition cursor-pointer flex items-center gap-1 shadow-xs"
-                                title={req.status === 'NHAP' ? "Tiếp tục chỉnh sửa hoặc đính kèm file để gửi duyệt" : "Chỉnh sửa thông tin đề xuất"}
-                              >
-                                <Edit3 className="w-3.5 h-3.5 text-amber-700" />
-                                {req.status === 'NHAP' ? 'Sửa & Gửi duyệt' : 'Sửa yêu cầu'}
-                              </button>
-                            )}
+                            <button
+                              onClick={() => handleOpenEditRequest(req)}
+                              className="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded font-bold text-[11px] transition cursor-pointer flex items-center gap-1 shadow-xs"
+                              title={req.status === 'NHAP' ? "Tiếp tục chỉnh sửa hoặc đính kèm file để gửi duyệt" : "Chỉnh sửa thông tin đề xuất đã tạo"}
+                            >
+                              <Edit3 className="w-3.5 h-3.5 text-amber-700" />
+                              {req.status === 'NHAP' ? 'Sửa & Gửi duyệt' : 'Sửa'}
+                            </button>
                             {isAccepted && (
                               <span className="text-[11px] text-blue-700 font-medium px-2 py-0.5 bg-blue-50 rounded border border-blue-200">
                                 Đã tiếp nhận • Chờ giao hàng
@@ -868,7 +864,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                       Danh mục mặt hàng & số lượng đề xuất:
                     </span>
                     <span className="text-[11px] text-slate-500 font-normal">
-                      Gõ tên vật tư vào ô bên dưới, hệ thống sẽ gợi ý danh mục liên quan để chọn nhanh.
+                      CBNV chỉ cần chọn tên hàng hóa chung (VD: <strong>Laptop văn phòng</strong>, <strong>Máy tính để bàn</strong>...). Bộ phận Kho & Thu mua sẽ chỉ định rõ Hãng & Cấu hình chi tiết khi mua sắm/cấp phát.
                     </span>
                   </div>
                   <button
@@ -890,7 +886,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                           c.code.toLowerCase().includes(line.item_name.toLowerCase()) ||
                           c.group.toLowerCase().includes(line.item_name.toLowerCase())
                       )
-                    : categories.slice(0, 5); // show top 5 popular if empty
+                    : categories.slice(0, 6); // show top 6 popular if empty
 
                   return (
                     <div
@@ -916,7 +912,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                         {/* INPUT 1: Điền tên vật tư cần đề xuất (Có autocomplete dropdown) */}
                         <div className="sm:col-span-6 relative">
                           <label className="text-[11px] text-slate-500 block mb-0.5">
-                            Vật tư cần đề xuất:
+                            Tên hàng hóa / Vật tư cần đề xuất:
                           </label>
                           <div className="relative">
                             <input
@@ -931,7 +927,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                                 );
                                 setActiveSuggestionIdx(idx);
                               }}
-                              placeholder="Điền vật tư cần đề xuất..."
+                              placeholder="VD: Laptop văn phòng, Giấy in A4..."
                               className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs focus:outline-emerald-600 font-medium"
                             />
                             {line.category_id && (
@@ -945,7 +941,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                           {activeSuggestionIdx === idx && (
                             <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-52 overflow-y-auto">
                               <div className="p-1.5 bg-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-                                <span>Gợi ý vật tư trong hệ thống:</span>
+                                <span>Gợi ý hàng hóa chung (Người dùng không cần chọn Hãng/Cấu hình):</span>
                                 <button
                                   type="button"
                                   onClick={() => setActiveSuggestionIdx(null)}
@@ -972,6 +968,11 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                                       </div>
                                       <div className="text-[10px] text-slate-500">
                                         Nhóm: {cat.group} • ĐVT: <strong className="text-slate-700">{cat.unit_of_measure}</strong>
+                                        {cat.supported_brands && cat.supported_brands.length > 0 && (
+                                          <span className="ml-1 text-indigo-700">
+                                            (Kho/Thu mua sẽ chọn Hãng: {cat.supported_brands.slice(0, 3).join(', ')}...)
+                                          </span>
+                                        )}
                                       </div>
                                     </div>
                                     <span
@@ -1014,7 +1015,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                         {/* INPUT 3: Note quy cách / mục đích */}
                         <div className="sm:col-span-4">
                           <label className="text-[11px] text-slate-500 block mb-0.5">
-                            Ghi chú quy cách:
+                            Ghi chú nhu cầu (Không bắt buộc):
                           </label>
                           <input
                             type="text"
@@ -1025,7 +1026,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                                 prev.map((l, i) => (i === idx ? { ...l, note: val } : l))
                               );
                             }}
-                            placeholder="Quy cách, cấu hình hoặc diễn giải..."
+                            placeholder="VD: Dùng cho công việc kế toán / thiết kế..."
                             className="w-full bg-white border border-slate-300 rounded-lg p-2 focus:outline-emerald-600 text-xs"
                           />
                         </div>
@@ -1137,7 +1138,7 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
       {/* --- MODAL 2: THỦ KHO CẤP PHÁT CHI TIẾT (Chỉ Thủ Kho truy cập được) --- */}
       {isAllocatingModalOpen && selectedReq && isWarehouseStaff && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
             <div className="px-6 py-4 bg-emerald-900 text-white flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-base">
@@ -1154,8 +1155,8 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
 
             <div className="flex-1 overflow-y-auto p-6 space-y-5 text-xs">
               <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 text-blue-900">
-                <span className="font-bold block mb-1">Gợi ý khả năng đáp ứng của kho hiện tại:</span>
-                Hệ thống tự động kiểm tra số lượng tồn và danh sách thiết bị có sẵn để thủ kho lựa chọn cấp phát chính xác.
+                <span className="font-bold block mb-1">Cấp phát rõ ràng Hãng & Cấu hình cho yêu cầu chung của CBNV:</span>
+                CBNV chỉ yêu cầu mặt hàng chung (VD: Laptop văn phòng). Thủ kho kiểm tra danh sách thiết bị đang sẵn có trong kho theo từng <strong>Hãng, Dòng máy (Model) & Cấu hình chi tiết</strong> để chọn bàn giao chính xác.
               </div>
 
               {selectedReq.lines.map((l) => {
@@ -1187,26 +1188,26 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                         <div className="p-3 bg-amber-50 text-amber-900 border border-amber-200 rounded-lg text-xs font-medium">
                           {selectedReq.status === 'CHO_MUA' ? (
                             <span>
-                              📦 Mặt hàng này đã được đưa vào <strong>Gom PO mua sắm</strong>. Khi đơn hàng PO mua sắm được nghiệm thu nhập kho, thiết bị định danh (với Serial & QR) sẽ hiển thị tại đây để bạn chọn cấp phát ngay.
+                              📦 Mặt hàng này đã được đưa vào <strong>Gom PO mua sắm</strong>. Khi đơn hàng PO mua sắm được nghiệm thu nhập kho, thiết bị định danh (với Hãng, Cấu hình, Serial & QR) sẽ hiển thị tại đây để bạn chọn cấp phát ngay.
                             </span>
                           ) : (
                             <span>
-                              ⚠️ Kho hiện không còn thiết bị này ở trạng thái TRONG KHO! Hãy bấm nút <strong>"Đưa vào Gom PO"</strong> tại hàng đợi để tổng hợp mua hàng.
+                              ⚠️ Kho hiện không còn thiết bị này ở trạng thái TRONG KHO! Hãy bấm nút <strong>"Đưa vào Gom PO"</strong> tại hàng đợi để tổng hợp mua hàng (bộ phận Thu mua sẽ chọn Hãng & Cấu hình đặt mua).
                             </span>
                           )}
                         </div>
                       ) : (
                         <div>
                           <span className="font-semibold text-slate-700 block mb-1.5">
-                            Chọn thiết bị định danh cụ thể để bàn giao (Có gợi ý Serial & QR):
+                            Chọn thiết bị định danh cụ thể theo Hãng & Cấu hình để bàn giao ({currentAlloc.selectedAssetIds.length}/{remaining} đã chọn):
                           </span>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto p-1">
+                          <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto p-1">
                             {availableAssets.map((ast) => {
                               const isChecked = currentAlloc.selectedAssetIds.includes(ast.asset_id);
                               return (
                                 <label
                                   key={ast.asset_id}
-                                  className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition ${
+                                  className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition ${
                                     isChecked
                                       ? 'bg-emerald-50 border-emerald-500 shadow-xs'
                                       : 'bg-white border-slate-200 hover:border-slate-300'
@@ -1231,11 +1232,30 @@ export const RequestsView: React.FC<RequestsViewProps> = ({
                                         };
                                       });
                                     }}
-                                    className="accent-emerald-700"
+                                    className="accent-emerald-700 mt-1"
                                   />
-                                  <div className="font-mono text-[11px] leading-tight">
-                                    <div className="font-bold text-slate-900">{ast.asset_code}</div>
-                                    <div className="text-slate-500">SN: {ast.serial_no}</div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 border border-indigo-200 font-bold text-[10px]">
+                                          {ast.brand || 'Chưa rõ hãng'}
+                                        </span>
+                                        <span className="font-bold text-slate-900 text-xs">
+                                          {ast.model_name || cat?.name}
+                                        </span>
+                                      </div>
+                                      <div className="font-mono text-[11px]">
+                                        <span className="font-bold text-emerald-800">{ast.asset_code}</span>
+                                        <span className="text-slate-400 mx-1">•</span>
+                                        <span className="text-slate-600">SN: {ast.serial_no}</span>
+                                      </div>
+                                    </div>
+                                    {ast.specifications && (
+                                      <div className="text-[11px] text-slate-600 mt-1 bg-slate-50 px-2 py-1 rounded border border-slate-100">
+                                        <span className="font-semibold text-slate-700">Cấu hình: </span>
+                                        {ast.specifications}
+                                      </div>
+                                    )}
                                   </div>
                                 </label>
                               );
